@@ -1,5 +1,7 @@
 #pragma once
 
+#include<math.h>
+
 namespace Humpback 
 {
 	class Vector4 
@@ -18,7 +20,7 @@ namespace Humpback
 			w = .0f;
 		}
 
-		Vector4(float x, float y, float z, float w)
+		Vector4(float x, float y, float z, float w = .0f)
 		{
 			this->x = x;
 			this->y = y;
@@ -34,6 +36,9 @@ namespace Humpback
 		Vector4 operator-(const Vector4& vector);
 		Vector4 operator*(const float f);
 		Vector4 operator/(const float f);
+
+		float Magnitude();
+		Vector4 Normalized();
 	};
 
 	inline Vector4 Vector4::operator+(const Vector4& vector) 
@@ -78,6 +83,21 @@ namespace Humpback
 		v.y = this->y / f;
 		v.z = this->z / f;
 		v.w = this->w / f;
+		return v;
+	}
+
+	inline float Vector4::Magnitude()
+	{
+		return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
+	}
+
+	inline Vector4 Vector4::Normalized()
+	{
+		Vector4 v;
+		float magnitude = this->Magnitude();
+		v.x = this->x / magnitude;
+		v.y = this->y / magnitude;
+		v.z = this->z / magnitude;
 		return v;
 	}
 
