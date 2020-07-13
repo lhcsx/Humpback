@@ -34,11 +34,12 @@ namespace Humpback
 
 		Vector4 operator+(const Vector4& vector);
 		Vector4 operator-(const Vector4& vector);
-		Vector4 operator*(const float f);
-		Vector4 operator/(const float f);
+		Vector4 operator*(float f);
+		Vector4 operator/(float f);
 
 		float Magnitude();
 		Vector4 Normalized();
+		float Dot(const Vector4&);
 	};
 
 	inline Vector4 Vector4::operator+(const Vector4& vector) 
@@ -61,7 +62,7 @@ namespace Humpback
 		return v;
 	}
 
-	inline Vector4 Vector4::operator*(const float f)
+	inline Vector4 Vector4::operator*(float f)
 	{
 		Vector4 v;
 		v.x = this->x * f;
@@ -71,7 +72,7 @@ namespace Humpback
 		return v;
 	}
 
-	inline Vector4 Vector4::operator/(const float f)
+	inline Vector4 Vector4::operator/(float f)
 	{
 		if (f == 0)
 		{
@@ -99,6 +100,11 @@ namespace Humpback
 		v.y = this->y / magnitude;
 		v.z = this->z / magnitude;
 		return v;
+	}
+
+	inline float Vector4::Dot(const Vector4& vector)
+	{
+		return this->x * vector.x + this->y * vector.y + this->z * vector.z + this->w * vector.w;
 	}
 
 	inline Vector4 operator-(const Vector4& vector)
