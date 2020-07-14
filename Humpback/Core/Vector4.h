@@ -40,6 +40,7 @@ namespace Humpback
 		float Magnitude();
 		Vector4 Normalized();
 		float Dot(const Vector4&);
+		Vector4 Cross(const Vector4&);
 	};
 
 	inline Vector4 Vector4::operator+(const Vector4& vector) 
@@ -105,6 +106,13 @@ namespace Humpback
 	inline float Vector4::Dot(const Vector4& vector)
 	{
 		return this->x * vector.x + this->y * vector.y + this->z * vector.z + this->w * vector.w;
+	}
+
+	// Only considering the x, y, and z component.
+	inline Vector4 Vector4::Cross(const Vector4& v)
+	{
+		return Vector4(this->y * v.z - this->z * v.y, 
+			this->z * v.x - this->x * v.z, this->x * v.y - this->y * v.x);
 	}
 
 	inline Vector4 operator-(const Vector4& vector)
