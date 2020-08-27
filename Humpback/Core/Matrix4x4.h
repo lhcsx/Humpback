@@ -23,7 +23,12 @@ namespace Humpback
 		 Matrix4x4 operator*(Matrix4x4&) const;
 		 Vector4 operator*(const Vector4&) const;
 
-		 Matrix4x4 Transpose();
+		 Matrix4x4 Transpose() const;
+		 float Determinant() const;
+		 float MINOR(const size_t r0, const size_t r1, const size_t r2,
+			 const size_t c0, const size_t c1, const size_t c2) const;
+
+		 Matrix4x4 Inverse() const;
 
 
 	private:
