@@ -14,6 +14,15 @@ namespace Humpback
 
 		return res;
 	}
+	Matrix4x4 Matrix4x4::Translation(Vector4 v)
+	{
+		Matrix4x4 res = Identity();
+		res[0][3] = v.x;
+		res[1][3] = v.y;
+		res[2][3] = v.z;
+
+		return res;
+	}
 	// ------------------------------------------------------------------------------------------
 	Matrix4x4::Matrix4x4()
 	{

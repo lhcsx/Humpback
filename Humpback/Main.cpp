@@ -16,7 +16,7 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     canvas.Canvas2PPM();*/
 
-    Vector4 v0 = { 1.f, 2.f, 3.f, 4.f };
+    /*Vector4 v0 = { 1.f, 2.f, 3.f, 4.f };
     Vector4 v1 = { 5.f, 6.f, 7.f, 8.f };
     Vector4 v2 = { 9.f, 8.f, 7.f, 6.f };
     Vector4 v3 = { 5.f, 4.f, 3.f, 2.f };
@@ -43,7 +43,16 @@ INT WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     Matrix4x4 m = Matrix4x4::Identity();
 
-    Matrix4x4 test_v = m2.Inverse();
+    Matrix4x4 test_v = m2.Inverse();*/
+
+    Matrix4x4 trans = Matrix4x4::Translation(Vector4(5, -3, 2));
+    Vector4 point(-3, 4, 5, 1);
+
+    Vector4 pointAfterTrans = trans * point;
+    Matrix4x4 inverseTrans = trans.Inverse();
+
+    Vector4 pointAfterInverseTrans = inverseTrans * pointAfterTrans;
+
 
     return 0;
 }

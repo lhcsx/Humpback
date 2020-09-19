@@ -8,6 +8,8 @@ namespace Humpback
 	{
 	public:
 		static Matrix4x4 Identity();
+		static Matrix4x4 Translation(Vector4);
+
 
 		Matrix4x4();
 
@@ -29,6 +31,7 @@ namespace Humpback
 			 const size_t c0, const size_t c1, const size_t c2) const;
 
 		 Matrix4x4 Inverse() const;
+
 
 
 	private:
