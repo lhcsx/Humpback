@@ -1,4 +1,5 @@
 #include<exception>
+#include<cmath>
 
 #include "Matrix4x4.h"
 
@@ -14,12 +15,80 @@ namespace Humpback
 
 		return res;
 	}
+	// ------------------------------------------------------------------------------------------
 	Matrix4x4 Matrix4x4::Translation(Vector4 v)
 	{
 		Matrix4x4 res = Identity();
 		res[0][3] = v.x;
 		res[1][3] = v.y;
 		res[2][3] = v.z;
+
+		return res;
+	}
+	// ------------------------------------------------------------------------------------------
+	Matrix4x4 Matrix4x4::Scale(Vector4 v)
+	{
+		Matrix4x4 res = Identity();
+		res[0][0] = v.x;
+		res[1][1] = v.y;
+		res[2][2] = v.z;
+
+		return res;
+	}
+	// ------------------------------------------------------------------------------------------
+	Matrix4x4 Matrix4x4::RotationX(float radians)
+	{
+		Matrix4x4 res;
+
+		res[0][0] = 1.f;
+		res[1][1] = std::cos(radians);
+		res[1][2] = - std::sin(radians);
+		res[2][1] = std::sin(radians);
+		res[2][2] = std::cos(radians);
+		res[3][3] = 1.f;
+
+		return res;
+	}
+	// ------------------------------------------------------------------------------------------
+	Matrix4x4 Matrix4x4::RotationY(float radians)
+	{
+		Matrix4x4 res;
+		res[0][0] = std::cos(radians);
+		res[0][2] = std::sin(radians);
+		res[1][1] = 1.f;
+		res[2][0] = -std::sin(radians);
+		res[2][2] = std::cos(radians);
+		res[3][3] = 1.f;
+
+		return res;
+	}
+	// ------------------------------------------------------------------------------------------
+	Matrix4x4 Matrix4x4::RotationZ(float radians)
+	{
+		Matrix4x4 res;
+		res[0][0] = std::cos(radians);
+		res[0][1] = -std::sin(radians);
+		res[1][0] = std::sin(radians);
+		res[1][1] = std::cos(radians);
+		res[2][2] = 1.f;
+		res[3][3] = 1.f;
+
+		return res;
+	}
+	// ------------------------------------------------------------------------------------------
+	Matrix4x4 Matrix4x4::Shearing(float xy, float xz, float yx, float yz, float zx, float zy)
+	{
+		Matrix4x4 res;
+		res[0][0] = 1.f;
+		res[0][1] = xy;
+		res[0][2] = xz;
+		res[1][0] = yx;
+		res[1][1] = 1.f;
+		res[1][2] = yz;
+		res[2][0] = zx;
+		res[2][1] = zy;
+		res[2][2] = 1.f;
+		res[3][3] = 1.f;
 
 		return res;
 	}

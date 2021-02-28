@@ -8,7 +8,14 @@ namespace Humpback
 	{
 	public:
 		static Matrix4x4 Identity();
+
+		// Matrix transformations.
 		static Matrix4x4 Translation(Vector4);
+		static Matrix4x4 Scale(Vector4);
+		static Matrix4x4 RotationX(float radians);
+		static Matrix4x4 RotationY(float radians);
+		static Matrix4x4 RotationZ(float radians);
+		static Matrix4x4 Shearing(float xy, float xz, float yx, float yz, float zx, float zy);
 
 
 		Matrix4x4();

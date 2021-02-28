@@ -32,18 +32,31 @@ namespace Humpback
 		Vector4& operator=(const Vector4& vector) = default;
 		~Vector4() = default;
 
-		Vector4 operator+(const Vector4& vector);
-		Vector4 operator-(const Vector4& vector);
-		Vector4 operator*(float f);
-		Vector4 operator/(float f);
+		static Vector4 VZero();
+		static Vector4 PZero();
 
-		float Magnitude();
-		Vector4 Normalized();
-		float Dot(const Vector4&);
-		Vector4 Cross(const Vector4&);
+		Vector4 operator+(const Vector4& vector) const;
+		Vector4 operator-(const Vector4& vector) const;
+		Vector4 operator*(float f) const;
+		Vector4 operator/(float f) const;
+
+		float Magnitude() const;
+		Vector4 Normalized() const;
+		float Dot(const Vector4&) const;
+		Vector4 Cross(const Vector4&) const;
 	};
-
-	inline Vector4 Vector4::operator+(const Vector4& vector) 
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::VZero()
+	{
+		return Vector4(.0f, .0f, .0f, .0f);
+	}
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::PZero()
+	{
+		return Vector4(.0f, .0f, .0f, 1.f);
+	}
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::operator+(const Vector4& vector) const
 	{
 		Vector4 v;
 		v.x = this->x + vector.x;
@@ -52,8 +65,8 @@ namespace Humpback
 		v.w = this->w + vector.w;
 		return v;
 	}
-
-	inline Vector4 Vector4::operator-(const Vector4& vector)
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::operator-(const Vector4& vector) const
 	{
 		Vector4 v;
 		v.x = this->x - vector.x;
@@ -62,8 +75,8 @@ namespace Humpback
 		v.w = this->w - vector.w;
 		return v;
 	}
-
-	inline Vector4 Vector4::operator*(float f)
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::operator*(float f) const
 	{
 		Vector4 v;
 		v.x = this->x * f;
@@ -72,8 +85,8 @@ namespace Humpback
 		v.w = this->w * f;
 		return v;
 	}
-
-	inline Vector4 Vector4::operator/(float f)
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::operator/(float f) const
 	{
 		if (f == 0)
 		{
@@ -87,13 +100,17 @@ namespace Humpback
 		v.w = this->w / f;
 		return v;
 	}
-
-	inline float Vector4::Magnitude()
+	// ------------------------------------------------------------------------------------------
+	inline float Vector4::Magnitude() const
 	{
-		return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
-	}
+		double x = this->x;
+		double y = this->y;
+		double z = this->z;
 
-	inline Vector4 Vector4::Normalized()
+		return static_cast<float>(sqrt(x * x + y * y + z * z));
+	}
+	// ------------------------------------------------------------------------------------------
+	inline Vector4 Vector4::Normalized() const
 	{
 		Vector4 v;
 		float magnitude = this->Magnitude();
@@ -102,19 +119,19 @@ namespace Humpback
 		v.z = this->z / magnitude;
 		return v;
 	}
-
-	inline float Vector4::Dot(const Vector4& vector)
+	// ------------------------------------------------------------------------------------------
+	inline float Vector4::Dot(const Vector4& vector) const
 	{
 		return this->x * vector.x + this->y * vector.y + this->z * vector.z + this->w * vector.w;
 	}
-
+	// ------------------------------------------------------------------------------------------
 	// Only considering the x, y, and z component.
-	inline Vector4 Vector4::Cross(const Vector4& v)
+	inline Vector4 Vector4::Cross(const Vector4& v) const
 	{
 		return Vector4(this->y * v.z - this->z * v.y, 
 			this->z * v.x - this->x * v.z, this->x * v.y - this->y * v.x);
 	}
-
+	// ------------------------------------------------------------------------------------------
 	inline Vector4 operator-(const Vector4& vector)
 	{
 		Vector4 v;
