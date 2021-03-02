@@ -1,4 +1,6 @@
 #include "Sphere.h"
+
+
 namespace Humpback
 {
 	Sphere::Sphere()
@@ -26,13 +28,15 @@ namespace Humpback
 			return false;
 		}
 
-		//t* t + 2 * (oc.Dot(d)) * t + oc.Dot(oc) - mRadius * mRadius;
 		delta = sqrt(delta);
 		t0 = -dotOCD - delta;
 		t1 = -dotOCD + delta;
 
 		hitResult.nearestHitPoint = ray.PositionAtT(t0);
 		hitResult.farestHitPoint = ray.PositionAtT(t1);
+		hitResult.t0 = t0;
+		hitResult.t1 = t1;
+		hitResult.pObject = this;
 
 		return true;
 	}
