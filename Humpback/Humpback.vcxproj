@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="HumpbackHelper.h" />
     <ClInclude Include="Humpback.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
