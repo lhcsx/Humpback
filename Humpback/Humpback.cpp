@@ -23,6 +23,9 @@ void ShutDownEngine();
 namespace 
 {
     Humpback::Renderer* gRenderer = nullptr;
+    UINT gWndWidth = 800;
+    UINT gWndHeight = 600;
+    HWND gHwnd;
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -44,7 +47,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    gRenderer = new Humpback::Renderer();
+    gRenderer = new Humpback::Renderer(gWndWidth, gWndHeight, gHwnd);
     if (gRenderer == nullptr)
     {
         return FALSE;
@@ -110,16 +113,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+   gHwnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+      CW_USEDEFAULT, 0, gWndWidth, gWndHeight, nullptr, nullptr, hInstance, nullptr);
 
-   if (!hWnd)
+   if (!gHwnd)
    {
       return FALSE;
    }
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+   ShowWindow(gHwnd, nCmdShow);
+   UpdateWindow(gHwnd);
 
    return TRUE;
 }
