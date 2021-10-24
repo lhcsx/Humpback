@@ -28,14 +28,21 @@ namespace Humpback {
 
 		void Clear();
 		void LoadPipeline();
+		void LoadAssets();
 
 		Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
 		Microsoft::WRL::ComPtr<IDXGISwapChain4> m_swapChain;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[Renderer::BufferCount];
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 
 		UINT m_width;
 		UINT m_height;
+		UINT m_frameIndex;
+		UINT m_descriptorSize;
 		HWND m_hwnd;
+
 	};
 }
 

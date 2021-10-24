@@ -2,6 +2,7 @@
 #include<dxgi1_6.h>
 #include<dxgi1_3.h>
 
+#include"d3dx12.h"
 #include "Renderer.h"
 #include "HumpbackHelper.h"
 
@@ -18,6 +19,7 @@ namespace Humpback {
 	void Renderer::Initialize()
 	{
 		LoadPipeline();
+		LoadAssets();
 	}
 
 	void Renderer::ShutDown()
@@ -71,7 +73,37 @@ namespace Humpback {
 
 		ThrowIfFailed(swapChain.As(&m_swapChain));
 
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
+		// Create descriptor heaps.
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+			heapDesc.NumDescriptors = Renderer::BufferCount;
+			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+
+			m_descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		}
+
+		// Create rander target view.
+		{
+			CD3DX12_CPU_DESCRIPTOR_HANDLE desHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+			// Create rtv for each frame buffer.
+			for (size_t i = 0; i < Renderer::BufferCount; i++)
+			{
+				ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
+				m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, desHandle);
+				desHandle.Offset(1, m_descriptorSize);
+			}
+		}
+		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+	}
+
+	void Renderer::LoadAssets()
+	{
+		// TODO
 	}
 }
 
