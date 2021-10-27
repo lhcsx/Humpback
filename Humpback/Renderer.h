@@ -36,13 +36,13 @@ namespace Humpback {
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[Renderer::BufferCount];
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+		Microsoft::WRL::ComPtr<ID3D12RootSignature>	m_rootSignature;
 
 		UINT m_width;
 		UINT m_height;
 		UINT m_frameIndex;
 		UINT m_descriptorSize;
 		HWND m_hwnd;
-
 	};
 }
 
