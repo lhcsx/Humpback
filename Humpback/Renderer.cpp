@@ -1,12 +1,17 @@
+// (c) Li Hongcheng
+// 2021/10/28
+
 #include<wrl.h>
 #include<dxgi1_6.h>
 #include<dxgi1_3.h>
+#include<d3dcompiler.h>
 
 #include"d3dx12.h"
 #include "Renderer.h"
 #include "HumpbackHelper.h"
 
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "D3DCompiler.lib")
 
 using namespace Microsoft::WRL;
 
@@ -116,7 +121,25 @@ namespace Humpback {
 
 		// Create pipeline state, which includes compiling and loading shaders.
 		{
-			// TODO	
+			ComPtr<ID3DBlob> vertexShader;
+			ComPtr<ID3DBlob> pixelShader;
+
+			UINT compileFlags = 0;
+
+			std::wstring path = L"\\Shaders\\SimpleShader.hlsl";
+			path = GetAssetPath(path);
+
+			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+
+			// Input layout.
+			D3D12_INPUT_ELEMENT_DESC inputDescs[] = 
+			{
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+				{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			};
+
+			// PSO
 		}
 	}
 }

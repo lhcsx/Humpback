@@ -1,5 +1,9 @@
+// (c) Li Hongcheng
+// 2021/10/28
+
 #pragma once
 
+#include<string>
 #include<Windows.h>
 #include<stdexcept>
 #include<cstdlib>
@@ -64,4 +68,15 @@ void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool
 
 		*ppAdapter = adapter.Detach();
 	}
+}
+
+std::wstring GetAssetPath(std::wstring str)
+{
+	WCHAR directoryBuffer[512] = {};
+	GetCurrentDirectory(512, directoryBuffer);
+
+	std::wstring path = std::wstring(directoryBuffer);
+	path += str;
+
+	return path;
 }

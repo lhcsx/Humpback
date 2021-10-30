@@ -1,8 +1,12 @@
+// (c) Li Hongcheng
+// 2021/10/28
+
 #pragma once
 
 #include<d3d12.h>
 #include<wrl.h>
 #include<dxgi1_5.h>
+#include<string>
 
 
 namespace Humpback {
@@ -43,6 +47,8 @@ namespace Humpback {
 		UINT m_frameIndex;
 		UINT m_descriptorSize;
 		HWND m_hwnd;
+		//std::string m_directory;
+		std::wstring m_directory;
 	};
 }
 
