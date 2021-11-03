@@ -41,6 +41,7 @@ namespace Humpback {
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[Renderer::BufferCount];
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 		Microsoft::WRL::ComPtr<ID3D12RootSignature>	m_rootSignature;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 
 		UINT m_width;
 		UINT m_height;

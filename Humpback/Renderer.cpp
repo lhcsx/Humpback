@@ -119,7 +119,7 @@ namespace Humpback {
 			ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		}
 
-		// Create pipeline state, which includes compiling and loading shaders.
+		// Create the pipeline state, which includes compiling and loading shaders.
 		{
 			ComPtr<ID3DBlob> vertexShader;
 			ComPtr<ID3DBlob> pixelShader;
@@ -133,14 +133,32 @@ namespace Humpback {
 			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
 			// Input layout.
-			D3D12_INPUT_ELEMENT_DESC inputDescs[] = 
+			D3D12_INPUT_ELEMENT_DESC inputDescs[] =
 			{
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 				{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
-			// PSO
+			// Create the pipeline state.
+			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+			psoDesc.InputLayout = { inputDescs, _countof(inputDescs) };
+			psoDesc.pRootSignature = m_rootSignature.Get();
+			psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+			psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+			psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+			psoDesc.DepthStencilState.DepthEnable = false;
+			psoDesc.DepthStencilState.StencilEnable = false;
+			psoDesc.SampleMask = UINT_MAX;
+			psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			psoDesc.NumRenderTargets = 1;
+			psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+			psoDesc.SampleDesc.Count = 1;
+			
+			ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
+
+		// Create the command list.
 	}
 }
 
