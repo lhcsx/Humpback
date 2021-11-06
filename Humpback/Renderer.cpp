@@ -17,7 +17,7 @@ using namespace Microsoft::WRL;
 
 namespace Humpback {
 	Renderer::Renderer(int width, int height, HWND hwnd): 
-		m_width(width), m_height(height), m_hwnd(hwnd)
+		m_width(width), m_height(height), m_hwnd(hwnd), m_aspectRatio(16.0f / 9.0f)
 	{
 	}
 
@@ -159,6 +159,50 @@ namespace Humpback {
 		}
 
 		// Create the command list.
+		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(),
+			IID_PPV_ARGS(&m_commandList)));
+
+		ThrowIfFailed(m_commandList->Close());
+
+		// Create the vertex buffer.
+		{
+			Vertex vertices[] =
+			{
+				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+				{{-0.0f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}
+			};
+
+			// The memory size of the vertex array.
+			const unsigned int vertexBufferSize = sizeof(vertices);
+
+			D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&heapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&resourceDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_vertexBuffer)
+			));
+
+			// Copy the triangle data to the vertex buffer.
+			UINT8* pVertexDataBegin;
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+			memcpy(pVertexDataBegin, vertices, sizeof(vertices));
+			m_vertexBuffer->Unmap(0, &readRange);
+
+			// Initialize the vertex buffer view.
+			m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+			m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+			m_vertexBufferView.SizeInBytes = sizeof(vertexBufferSize);
+		}
+
+		// Create the synchronization objects and wait until assets have been uploaded to the GPU.
+
 	}
 }
 

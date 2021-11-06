@@ -7,6 +7,9 @@
 #include<wrl.h>
 #include<dxgi1_5.h>
 #include<string>
+#include<DirectXMath.h>
+
+using Microsoft::WRL::ComPtr;
 
 
 namespace Humpback {
@@ -30,24 +33,36 @@ namespace Humpback {
 
 	private:
 
+		struct Vertex
+		{
+			DirectX::XMFLOAT3 position;
+			DirectX::XMFLOAT4 color;
+		};
+
 		void Clear();
 		void LoadPipeline();
 		void LoadAssets();
 
-		Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_commandQueue;
-		Microsoft::WRL::ComPtr<IDXGISwapChain4> m_swapChain;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_renderTargets[Renderer::BufferCount];
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-		Microsoft::WRL::ComPtr<ID3D12RootSignature>	m_rootSignature;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+		ComPtr<ID3D12Device>				m_device;
+		ComPtr<ID3D12CommandQueue>			m_commandQueue;
+		ComPtr<IDXGISwapChain4>				m_swapChain;
+		ComPtr<ID3D12DescriptorHeap>		m_rtvHeap;
+		ComPtr<ID3D12Resource>				m_renderTargets[Renderer::BufferCount];
+		ComPtr<ID3D12CommandAllocator>		m_commandAllocator;
+		ComPtr<ID3D12RootSignature>			m_rootSignature;
+		ComPtr<ID3D12PipelineState>			m_pipelineState;
+		ComPtr<ID3D12GraphicsCommandList>	m_commandList;
+
+		ComPtr<ID3D12Resource>				m_vertexBuffer;
+		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
+
 
 		UINT m_width;
 		UINT m_height;
 		UINT m_frameIndex;
 		UINT m_descriptorSize;
 		HWND m_hwnd;
+		float m_aspectRatio;
 		//std::string m_directory;
 		std::wstring m_directory;
 	};
