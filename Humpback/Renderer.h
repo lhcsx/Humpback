@@ -42,6 +42,7 @@ namespace Humpback {
 		void Clear();
 		void LoadPipeline();
 		void LoadAssets();
+		void WaitForPreviousFrame();
 
 		ComPtr<ID3D12Device>				m_device;
 		ComPtr<ID3D12CommandQueue>			m_commandQueue;
@@ -52,9 +53,11 @@ namespace Humpback {
 		ComPtr<ID3D12RootSignature>			m_rootSignature;
 		ComPtr<ID3D12PipelineState>			m_pipelineState;
 		ComPtr<ID3D12GraphicsCommandList>	m_commandList;
-
 		ComPtr<ID3D12Resource>				m_vertexBuffer;
+		
+		ComPtr<ID3D12Fence>					m_fence;
 		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
+		HANDLE								m_fenceEvent;
 
 
 		UINT m_width;
@@ -65,6 +68,7 @@ namespace Humpback {
 		float m_aspectRatio;
 		//std::string m_directory;
 		std::wstring m_directory;
+		UINT m_fenceValue = 0;
 	};
 }
 

@@ -202,7 +202,33 @@ namespace Humpback {
 		}
 
 		// Create the synchronization objects and wait until assets have been uploaded to the GPU.
+		{
+			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+			m_fenceValue = 0;
+			m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
+			if (m_fenceEvent == nullptr)
+			{
+				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+			}
 
+			WaitForPreviousFrame();
+		}
+	}
+
+	void Renderer::WaitForPreviousFrame()
+	{
+		const UINT64 fence = m_fenceValue;
+		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
+		m_fenceValue += 1;
+
+		// Wati untile the previous frame is finished.
+		if (m_fence->GetCompletedValue() < fence)
+		{
+			ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+			WaitForSingleObject(m_fenceEvent, INFINITY);
+		}
+
+		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 }
 
