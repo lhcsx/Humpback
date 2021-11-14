@@ -196,7 +196,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-// ShutDown the engine before quit the application.
+// Shut down the engine before quit the application.
 void ShutDownEngine()
 {
     if (gRenderer)

@@ -16,8 +16,10 @@
 using namespace Microsoft::WRL;
 
 namespace Humpback {
-	Renderer::Renderer(int width, int height, HWND hwnd): 
-		m_width(width), m_height(height), m_hwnd(hwnd), m_aspectRatio(16.0f / 9.0f)
+	Renderer::Renderer(int width, int height, HWND hwnd) :
+		m_width(width), m_height(height), m_hwnd(hwnd), m_aspectRatio(16.0f / 9.0f),
+		m_viewPort(0.f, 0.f, m_width, m_height), m_scissorRect(0, 0, m_width, m_height)
+
 	{
 	}
 
@@ -27,13 +29,33 @@ namespace Humpback {
 		LoadAssets();
 	}
 
+	void Renderer::Update()
+	{
+		// TODO
+	}
+
+	void Renderer::Render()
+	{
+		PopulateCommandList();
+	}
+
+	void Renderer::Tick()
+	{
+		Update();
+		Render();
+		Clear();
+	}
+
 	void Renderer::ShutDown()
 	{
-		Clear();
+		WaitForPreviousFrame();
+
+		CloseHandle(m_fenceEvent);
 	}
 
 	void Renderer::Clear()
 	{
+		
 	}
 
 	void Renderer::LoadPipeline()
@@ -229,6 +251,24 @@ namespace Humpback {
 		}
 
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	}
+
+	void Renderer::PopulateCommandList()
+	{
+		ThrowIfFailed(m_commandAllocator->Reset());
+
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+
+		// Set necessary state.
+		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+		m_commandList->RSSetViewports(1, &m_viewPort);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+		// Indicate that the back buffer is will now be used to present.
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), 
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+		ThrowIfFailed(m_commandList->Close());
 	}
 }
 
