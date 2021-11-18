@@ -65,8 +65,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+            if (gRenderer)
+            {
+                gRenderer->Tick();
+            }
         }
     }
+
+    ShutDownEngine();
 
     return (int) msg.wParam;
 }
@@ -167,7 +173,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
-        ShutDownEngine();
         PostQuitMessage(0);
         break;
     default:

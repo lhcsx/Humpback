@@ -3,11 +3,12 @@
 
 #pragma once
 
-#include<d3d12.h>
 #include<wrl.h>
 #include<dxgi1_5.h>
 #include<string>
 #include<DirectXMath.h>
+
+#include"d3dx12.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -63,14 +64,14 @@ namespace Humpback {
 		UINT m_width;
 		UINT m_height;
 		UINT m_frameIndex;
-		UINT m_descriptorSize;
 		HWND m_hwnd;
 		float m_aspectRatio;
 		//std::string m_directory;
 		std::wstring m_directory;
-		UINT m_fenceValue = 0;
+		UINT m_fenceValue;
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
+		UINT								m_rtvDescriptorSize;
 	};
 }
 

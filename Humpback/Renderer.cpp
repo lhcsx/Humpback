@@ -17,8 +17,9 @@ using namespace Microsoft::WRL;
 
 namespace Humpback {
 	Renderer::Renderer(int width, int height, HWND hwnd) :
-		m_width(width), m_height(height), m_hwnd(hwnd), m_aspectRatio(16.0f / 9.0f),
-		m_viewPort(0.f, 0.f, m_width, m_height), m_scissorRect(0, 0, m_width, m_height)
+		m_fenceEvent(0), m_width(width), m_height(height), m_frameIndex(0), m_hwnd(hwnd), 
+		m_aspectRatio(16.0f / 9.0f), m_fenceValue(0), m_viewPort(0.f, 0.f, m_width, m_height), 
+		m_scissorRect(0, 0, m_width, m_height), m_rtvDescriptorSize(0)
 
 	{
 	}
@@ -37,6 +38,9 @@ namespace Humpback {
 	void Renderer::Render()
 	{
 		PopulateCommandList();
+
+		// Execute the command list.
+
 	}
 
 	void Renderer::Tick()
@@ -110,7 +114,7 @@ namespace Humpback {
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_rtvHeap)));
 
-			m_descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		}
 
 		// Create rander target view.
@@ -122,7 +126,7 @@ namespace Humpback {
 			{
 				ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
 				m_device->CreateRenderTargetView(m_renderTargets[i].Get(), nullptr, desHandle);
-				desHandle.Offset(1, m_descriptorSize);
+				desHandle.Offset(1, m_rtvDescriptorSize);
 			}
 		}
 		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
@@ -264,9 +268,23 @@ namespace Humpback {
 		m_commandList->RSSetViewports(1, &m_viewPort);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		// Indicate that the back buffer is will now be used to present.
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), 
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+		// Indicate that the back buffer will be used as a render target.
+		auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), 
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		m_commandList->ResourceBarrier(1, &resourceBarrier);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+		m_commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+
+		const float clearColor[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+		m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+		m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+		m_commandList->DrawInstanced(3, 1, 0, 0);
+
+		auto resourceBarrierRT2Pre = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		m_commandList->ResourceBarrier(1, &resourceBarrierRT2Pre);
 
 		ThrowIfFailed(m_commandList->Close());
 	}
