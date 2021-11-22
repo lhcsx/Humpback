@@ -57,22 +57,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_HUMPBACK));
-    MSG msg;
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    MSG msg = {};
+    while (msg.message != WM_QUIT)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
-            if (gRenderer)
-            {
-                gRenderer->Tick();
-            }
+        }
+
+        if (gRenderer != nullptr)
+        {
+            gRenderer->Tick();
         }
     }
-
-    ShutDownEngine();
 
     return (int) msg.wParam;
 }
@@ -169,10 +168,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
+           
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
+        ShutDownEngine();
         PostQuitMessage(0);
         break;
     default:

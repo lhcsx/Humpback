@@ -18,7 +18,7 @@ using namespace Microsoft::WRL;
 namespace Humpback {
 	Renderer::Renderer(int width, int height, HWND hwnd) :
 		m_fenceEvent(0), m_width(width), m_height(height), m_frameIndex(0), m_hwnd(hwnd), 
-		m_aspectRatio(16.0f / 9.0f), m_fenceValue(0), m_viewPort(0.f, 0.f, m_width, m_height), 
+		m_aspectRatio(m_width / m_height), m_fenceValue(0), m_viewPort(0.f, 0.f, m_width, m_height),
 		m_scissorRect(0, 0, m_width, m_height), m_rtvDescriptorSize(0)
 
 	{
@@ -40,7 +40,12 @@ namespace Humpback {
 		PopulateCommandList();
 
 		// Execute the command list.
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
+		m_swapChain->Present(1, 0);
+
+		WaitForPreviousFrame();
 	}
 
 	void Renderer::Tick()
@@ -152,7 +157,7 @@ namespace Humpback {
 
 			UINT compileFlags = 0;
 
-			std::wstring path = L"\\Shaders\\SimpleShader.hlsl";
+			std::wstring path = L"\\shaders\\SimpleShader.hlsl";
 			path = GetAssetPath(path);
 
 			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
@@ -196,7 +201,7 @@ namespace Humpback {
 			{
 				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
 				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-				{{-0.0f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}
+				{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}
 			};
 
 			// The memory size of the vertex array.
@@ -219,12 +224,12 @@ namespace Humpback {
 			CD3DX12_RANGE readRange(0, 0);
 			ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
 			memcpy(pVertexDataBegin, vertices, sizeof(vertices));
-			m_vertexBuffer->Unmap(0, &readRange);
+			m_vertexBuffer->Unmap(0, nullptr);
 
 			// Initialize the vertex buffer view.
 			m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
 			m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-			m_vertexBufferView.SizeInBytes = sizeof(vertexBufferSize);
+			m_vertexBufferView.SizeInBytes = vertexBufferSize;
 		}
 
 		// Create the synchronization objects and wait until assets have been uploaded to the GPU.
