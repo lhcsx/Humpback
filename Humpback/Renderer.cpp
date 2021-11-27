@@ -141,12 +141,42 @@ namespace Humpback {
 	{
 		// Create an empty root signature.
 		{
-			CD3DX12_ROOT_SIGNATURE_DESC signatureDesc = {};
-			signatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-			
+			D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+			// This is the highest version the sample supports. If ChectFeatureSupport succeeds, the HightesVersion returned will not greater than this.			
+			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+			if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+			{
+				featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+			}
+
+			CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+			ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+
+			CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+			rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+
+			D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+			samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+			samplerDesc.MipLODBias = 0;
+			samplerDesc.MaxAnisotropy = 0;
+			samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+			samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+			samplerDesc.MinLOD = 0.0f;
+			samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+			samplerDesc.ShaderRegister = 0;
+			samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+			rootSignatureDesc.Init_1_1(_countof(rootParameters), &rootParameters[0], 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+
 			ComPtr<ID3DBlob> signature;
 			ComPtr<ID3DBlob> error;
-			ThrowIfFailed(D3D12SerializeRootSignature(&signatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+			ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
 			ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 		}
 
