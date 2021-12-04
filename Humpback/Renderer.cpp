@@ -113,11 +113,20 @@ namespace Humpback {
 
 		// Create descriptor heaps.
 		{
+			// rtv
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 			heapDesc.NumDescriptors = Renderer::BufferCount;
 			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+
+			// Describe and create a shader resource view heap for the texture.
+			D3D12_DESCRIPTOR_HEAP_DESC srvDesc = {};
+			srvDesc.NumDescriptors = 1;
+			srvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+			srvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			ThrowIfFailed(m_device->CreateDescriptorHeap(&srvDesc, IID_PPV_ARGS(&m_srvHeap)));
+
 
 			m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		}
@@ -262,6 +271,73 @@ namespace Humpback {
 			m_vertexBufferView.SizeInBytes = vertexBufferSize;
 		}
 
+	
+		// Create texture.
+		// This resource needs to stay in scope until the command list that references it
+		// has finished executing on the GPU.
+		ComPtr<ID3D12Resource> textureUploadHeap;
+		
+		{
+			// Describe and create a texture.
+			D3D12_RESOURCE_DESC textureDesc = {};
+			textureDesc.MipLevels = 1;
+			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			textureDesc.SampleDesc.Count = 1;
+			textureDesc.SampleDesc.Quality = 0;
+			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			textureDesc.Width = TextureWidth;
+			textureDesc.Height = TextureHeight;
+			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			textureDesc.DepthOrArraySize = 1;
+
+
+			auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(m_device->CreateCommittedResource(&defaultHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&textureDesc,
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(&m_texture)));
+
+
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+
+			// Create the GPU upload buffer.
+			auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+			ThrowIfFailed(m_device->CreateCommittedResource(&uploadHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&textureUploadHeap)));
+
+
+			// Copy data to the intermediate upload heap and then shedule a copy
+			// from the upload heap to the Texture2D.
+			std::vector<UINT8> texture = GenerateTextureData();
+
+			D3D12_SUBRESOURCE_DATA textureData = {};
+			textureData.pData = &texture[0];
+			textureData.RowPitch = TextureWidth * TexturePixelSize;
+			textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+
+			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+			// Describ and create a SRV for the texture.
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.Format = textureDesc.Format;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = 1;
+			m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+		}
+
+		// TODO
+		// Close the command list and execute it to begin the initial GPU setup.
+
+
 		// Create the synchronization objects and wait until assets have been uploaded to the GPU.
 		{
 			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
@@ -272,6 +348,7 @@ namespace Humpback {
 				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 			}
 
+			// Wait for setup to compelete before continuing.
 			WaitForPreviousFrame();
 		}
 	}
@@ -322,6 +399,41 @@ namespace Humpback {
 		m_commandList->ResourceBarrier(1, &resourceBarrierRT2Pre);
 
 		ThrowIfFailed(m_commandList->Close());
+	}
+	std::vector<UINT8> Renderer::GenerateTextureData()
+	{
+		const UINT rowPitch = TextureWidth * TexturePixelSize;
+		const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
+		const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+		const UINT textureSize = rowPitch * TextureHeight;
+
+		std::vector<UINT8> data(textureSize);
+		UINT8* pData = &data[0];
+
+		for (UINT n = 0; n < textureSize; n += TexturePixelSize)
+		{
+			UINT x = n % rowPitch;
+			UINT y = n / rowPitch;
+			UINT i = x / cellPitch;
+			UINT j = y / cellHeight;
+
+			if (i % 2 == j % 2)
+			{
+				pData[n] = 0x00;        // R
+				pData[n + 1] = 0x00;    // G
+				pData[n + 2] = 0x00;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+			else
+			{
+				pData[n] = 0xff;        // R
+				pData[n + 1] = 0xff;    // G
+				pData[n + 2] = 0xff;    // B
+				pData[n + 3] = 0xff;    // A
+			}
+		}
+
+		return data;
 	}
 }
 

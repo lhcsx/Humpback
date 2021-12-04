@@ -25,6 +25,9 @@ namespace Humpback {
 		}
 
 		static const UINT BufferCount = 2;
+		static const UINT TextureWidth = 256;
+		static const UINT TextureHeight = 256;
+		static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
 
 		void Initialize();
 		void Update();
@@ -45,11 +48,13 @@ namespace Humpback {
 		void LoadAssets();
 		void WaitForPreviousFrame();
 		void PopulateCommandList();
+		std::vector<UINT8>	GenerateTextureData();
 
 		ComPtr<ID3D12Device>				m_device;
 		ComPtr<ID3D12CommandQueue>			m_commandQueue;
 		ComPtr<IDXGISwapChain4>				m_swapChain;
 		ComPtr<ID3D12DescriptorHeap>		m_rtvHeap;
+		ComPtr<ID3D12DescriptorHeap>		m_srvHeap;
 		ComPtr<ID3D12Resource>				m_renderTargets[Renderer::BufferCount];
 		ComPtr<ID3D12CommandAllocator>		m_commandAllocator;
 		ComPtr<ID3D12RootSignature>			m_rootSignature;
@@ -67,7 +72,6 @@ namespace Humpback {
 		UINT m_frameIndex;
 		HWND m_hwnd;
 		float m_aspectRatio;
-		//std::string m_directory;
 		std::wstring m_directory;
 		UINT m_fenceValue;
 		CD3DX12_VIEWPORT					m_viewPort;
