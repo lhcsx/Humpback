@@ -11,6 +11,7 @@
 #include "HumpbackHelper.h"
 
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "D3DCompiler.lib")
 
 using namespace Microsoft::WRL;
@@ -180,7 +181,8 @@ namespace Humpback {
 			samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 			CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-			rootSignatureDesc.Init_1_1(_countof(rootParameters), &rootParameters[0], 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+			rootSignatureDesc.Init_1_1(_countof(rootParameters), &rootParameters[0], 1, &samplerDesc, 
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 
 			ComPtr<ID3DBlob> signature;
@@ -206,7 +208,7 @@ namespace Humpback {
 			D3D12_INPUT_ELEMENT_DESC inputDescs[] =
 			{
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-				{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
 			// Create the pipeline state.
@@ -232,15 +234,13 @@ namespace Humpback {
 		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(),
 			IID_PPV_ARGS(&m_commandList)));
 
-		ThrowIfFailed(m_commandList->Close());
-
 		// Create the vertex buffer.
 		{
 			Vertex vertices[] =
 			{
-				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-				{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}
+				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {0.5f, 0.0f}},
+				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f}},
+				{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f}}
 			};
 
 			// The memory size of the vertex array.
@@ -292,7 +292,8 @@ namespace Humpback {
 
 
 			auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-			ThrowIfFailed(m_device->CreateCommittedResource(&defaultHeapProperties,
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&defaultHeapProperties,
 				D3D12_HEAP_FLAG_NONE,
 				&textureDesc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
@@ -303,11 +304,12 @@ namespace Humpback {
 			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
 
 			// Create the GPU upload buffer.
-			auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-
-			ThrowIfFailed(m_device->CreateCommittedResource(&uploadHeapProperties,
+			auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&uploadHeapProperties,
 				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+				&uploadBufferDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				IID_PPV_ARGS(&textureUploadHeap)));
@@ -323,7 +325,8 @@ namespace Humpback {
 			textureData.SlicePitch = textureData.RowPitch * TextureHeight;
 
 			UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+			auto copyDest2ShaderResource = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			m_commandList->ResourceBarrier(1, &copyDest2ShaderResource);
 
 			// Describ and create a SRV for the texture.
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -334,14 +337,16 @@ namespace Humpback {
 			m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
-		// TODO
 		// Close the command list and execute it to begin the initial GPU setup.
-
+		ThrowIfFailed(m_commandList->Close());
+		ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
+		
 
 		// Create the synchronization objects and wait until assets have been uploaded to the GPU.
 		{
 			ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-			m_fenceValue = 0;
+			m_fenceValue = 1;
 			m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
 			if (m_fenceEvent == nullptr)
 			{
@@ -351,6 +356,8 @@ namespace Humpback {
 			// Wait for setup to compelete before continuing.
 			WaitForPreviousFrame();
 		}
+
+
 	}
 
 	void Renderer::WaitForPreviousFrame()
@@ -377,8 +384,14 @@ namespace Humpback {
 
 		// Set necessary state.
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+		ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
+		m_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+		m_commandList->SetGraphicsRootDescriptorTable(0, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 		m_commandList->RSSetViewports(1, &m_viewPort);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
 
 		// Indicate that the back buffer will be used as a render target.
 		auto resourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), 
@@ -436,5 +449,3 @@ namespace Humpback {
 		return data;
 	}
 }
-
-
