@@ -48,6 +48,12 @@
     <ClInclude Include="Timer.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="UploadBufferHelper.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="D3DUtil.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Humpback.cpp">
