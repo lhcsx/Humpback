@@ -1,12 +1,12 @@
 // (c) Li Hongcheng
 // 2021/10/28
 
-#include<wrl.h>
-#include<dxgi1_6.h>
-#include<dxgi1_3.h>
-#include<d3dcompiler.h>
+#include <wrl.h>
+#include <dxgi1_6.h>
+#include <dxgi1_3.h>
+#include <d3dcompiler.h>
 
-#include"d3dx12.h"
+#include "d3dx12.h"
 #include "Renderer.h"
 #include "HumpbackHelper.h"
 
@@ -27,6 +27,7 @@ namespace Humpback {
 
 	void Renderer::Initialize()
 	{
+		Prepare();
 		LoadPipeline();
 		LoadAssets();
 	}
@@ -51,21 +52,28 @@ namespace Humpback {
 
 	void Renderer::Tick()
 	{
+		m_timer->Tick();
 		Update();
 		Render();
-		Clear();
 	}
 
 	void Renderer::ShutDown()
 	{
 		WaitForPreviousFrame();
-
-		CloseHandle(m_fenceEvent);
+		Clear();
 	}
 
 	void Renderer::Clear()
 	{
-		
+		CloseHandle(m_fenceEvent);
+		m_timer.reset();
+		m_timer.release();
+	}
+
+	void Renderer::Prepare()
+	{
+		m_timer = std::make_unique<Timer>();
+		m_timer->Reset();
 	}
 
 	void Renderer::LoadPipeline()

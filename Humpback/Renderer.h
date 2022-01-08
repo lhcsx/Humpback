@@ -3,12 +3,14 @@
 
 #pragma once
 
-#include<wrl.h>
-#include<dxgi1_5.h>
-#include<string>
-#include<DirectXMath.h>
+#include <wrl.h>
+#include <dxgi1_5.h>
+#include <string>
+#include <DirectXMath.h>
+#include <memory>
 
-#include"d3dx12.h"
+#include "d3dx12.h"
+#include "Timer.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -30,6 +32,7 @@ namespace Humpback {
 		static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
 
 		void Initialize();
+		void Prepare();
 		void Update();
 		void Render();
 		void Tick();
@@ -49,6 +52,8 @@ namespace Humpback {
 		void WaitForPreviousFrame();
 		void PopulateCommandList();
 		std::vector<UINT8>	GenerateTextureData();
+
+		std::unique_ptr<Timer>				m_timer;
 
 		ComPtr<ID3D12Device>				m_device;
 		ComPtr<ID3D12CommandQueue>			m_commandQueue;
