@@ -38,6 +38,11 @@ namespace Humpback {
 		void Tick();
 		void ShutDown();
 
+		void OnMouseDown(int x, int y);
+		void OnMouseUp();
+		void OnMouseMove(WPARAM btnState, int x, int y);
+
+
 	private:
 
 		struct Vertex
@@ -82,6 +87,8 @@ namespace Humpback {
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
 		UINT								m_rtvDescriptorSize;
+
+		POINT								m_lastMousePoint;
 	};
 }
 

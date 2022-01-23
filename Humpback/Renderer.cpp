@@ -10,10 +10,6 @@
 #include "Renderer.h"
 #include "HumpbackHelper.h"
 
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "dxguid.lib")
-#pragma comment(lib, "D3DCompiler.lib")
-
 using namespace Microsoft::WRL;
 
 namespace Humpback {
@@ -61,6 +57,24 @@ namespace Humpback {
 	{
 		WaitForPreviousFrame();
 		Clear();
+	}
+
+	void Renderer::OnMouseDown(int x, int y)
+	{
+		m_lastMousePoint.x = x;
+		m_lastMousePoint.y = y;
+
+		SetCapture(m_hwnd);
+	}
+
+	void Renderer::OnMouseUp()
+	{
+		ReleaseCapture();
+	}
+
+	void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
+	{
+		// TODO
 	}
 
 	void Renderer::Clear()
@@ -206,11 +220,17 @@ namespace Humpback {
 
 			UINT compileFlags = 0;
 
-			std::wstring path = L"\\shaders\\SimpleShader.hlsl";
-			path = GetAssetPath(path);
+			std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
+			std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
+			vsPath = GetAssetPath(vsPath);
+			psPath = GetAssetPath(psPath);
 
-			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+			/*ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+			ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));*/
+
+			vertexShader = LoadBinary(vsPath);
+			pixelShader = LoadBinary(psPath);
+
 
 			// Input layout.
 			D3D12_INPUT_ELEMENT_DESC inputDescs[] =

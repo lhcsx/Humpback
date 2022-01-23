@@ -1,6 +1,8 @@
 // Humpback.cpp : Defines the entry point for the application.
 //
 
+#include <windowsx.h>
+
 #include "framework.h"
 #include "Humpback.h"
 #include "Renderer.h"
@@ -157,6 +159,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
+                break;
+            case WM_LBUTTONDOWN:
+                gRenderer->OnMouseDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                break;
+            case WM_LBUTTONUP:
+                gRenderer->OnMouseUp();
+                break;
+            case WM_MOUSEMOVE:
+                gRenderer->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
