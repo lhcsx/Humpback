@@ -41,6 +41,7 @@ namespace Humpback{
 
 		// Define camera space via lookat parameters.
 		void LookAt(DirectX::FXMVECTOR position, DirectX::FXMVECTOR target, DirectX::FXMVECTOR worldUp);
+		void LookAt(const DirectX::XMFLOAT3& positon, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& worldUp);
 
 		// Get view/projection matrix.
 		DirectX::XMMATRIX GetViewMatrix() const;
@@ -55,6 +56,10 @@ namespace Humpback{
 		// Walk/Strade the camera of distance d.
 		void Walk(float d);
 		void Strafe(float d);
+
+		// Rotate the camera.
+		void Pitch(float angle);
+		void RotateY(float angle);
 
 	private:
 

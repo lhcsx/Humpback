@@ -94,6 +94,17 @@ namespace Humpback
 		m_viewDirty = true;
 	}
 
+	void Camera::LookAt(const DirectX::XMFLOAT3& positon, const DirectX::XMFLOAT3& target, const DirectX::XMFLOAT3& worldUp)
+	{
+		XMVECTOR p = XMLoadFloat3(&positon);
+		XMVECTOR t = XMLoadFloat3(&target);
+		XMVECTOR u = XMLoadFloat3(&worldUp);
+
+		LookAt(p, t, u);
+
+		m_viewDirty = true;
+	}
+
 	DirectX::XMMATRIX Camera::GetViewMatrix() const
 	{
 		return XMLoadFloat4x4(&m_viewMatrix);
@@ -182,6 +193,34 @@ namespace Humpback
 
 		XMVECTOR newPos = XMVectorMultiplyAdd(right, distance, pos);
 		XMStoreFloat3(&m_position, newPos);
+
+		m_viewDirty = true;
+	}
+
+	void Camera::Pitch(float angle)
+	{
+		XMVECTOR right = XMLoadFloat3(&m_right);
+		XMVECTOR forward = XMLoadFloat3(&m_forward);
+		XMVECTOR up = XMLoadFloat3(&m_up);
+
+		XMMATRIX rotationMatrix = XMMatrixRotationAxis(right, angle);
+		XMStoreFloat3(&m_forward, XMVector3TransformNormal(forward, rotationMatrix));
+		XMStoreFloat3(&m_up, XMVector3TransformNormal(up, rotationMatrix));
+
+		m_viewDirty = true;
+	}
+
+	void Camera::RotateY(float angle)
+	{
+		XMMATRIX rotationMatrix = XMMatrixRotationY(angle);
+
+		XMVECTOR right = XMLoadFloat3(&m_right);
+		XMVECTOR forward = XMLoadFloat3(&m_forward);
+		XMVECTOR up = XMLoadFloat3(&m_up);
+
+		XMStoreFloat3(&m_forward, XMVector3TransformNormal(forward, rotationMatrix));
+		XMStoreFloat3(&m_up, XMVector3TransformNormal(up, rotationMatrix));
+		XMStoreFloat3(&m_right, XMVector3TransformNormal(right, rotationMatrix));
 
 		m_viewDirty = true;
 	}
