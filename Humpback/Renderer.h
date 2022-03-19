@@ -11,6 +11,7 @@
 
 #include "d3dx12.h"
 #include "Timer.h"
+#include "Renderable.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -76,6 +77,8 @@ namespace Humpback {
 		ComPtr<ID3D12Fence>					m_fence;
 		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
 		HANDLE								m_fenceEvent;
+
+		std::vector<Renderable*>*			m_renderableList;
 
 		UINT m_width;
 		UINT m_height;

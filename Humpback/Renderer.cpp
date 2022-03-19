@@ -9,6 +9,7 @@
 #include "d3dx12.h"
 #include "Renderer.h"
 #include "HumpbackHelper.h"
+#include "Box.h"
 
 using namespace Microsoft::WRL;
 
@@ -88,6 +89,11 @@ namespace Humpback {
 	{
 		m_timer = std::make_unique<Timer>();
 		m_timer->Reset();
+
+		// Crate a box.
+		m_renderableList = new std::vector<Renderable*>;
+		Box* box = new Box();
+		m_renderableList->push_back(box);
 	}
 
 	void Renderer::LoadPipeline()
