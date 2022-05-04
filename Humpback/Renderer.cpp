@@ -1,19 +1,30 @@
 // (c) Li Hongcheng
-// 2021/10/28
+// 2021-10-28
+
+#include <array>
+#include <memory>
 
 #include <wrl.h>
 #include <dxgi1_6.h>
 #include <dxgi1_3.h>
 #include <d3dcompiler.h>
+#include <DirectXColors.h>
 
 #include "d3dx12.h"
 #include "Renderer.h"
 #include "HumpbackHelper.h"
 #include "Box.h"
+#include "D3DUtil.h"
+#include "HMathHelper.h"
 
 using namespace Microsoft::WRL;
+using namespace DirectX;
+using namespace DirectX::Colors;
 
-namespace Humpback {
+
+namespace Humpback 
+{
+
 	Renderer::Renderer(int width, int height, HWND hwnd) :
 		m_fenceEvent(0), m_width(width), m_height(height), m_frameIndex(0), m_hwnd(hwnd), 
 		m_aspectRatio(m_width / m_height), m_fenceValue(0), m_viewPort(0.f, 0.f, m_width, m_height),
@@ -24,9 +35,11 @@ namespace Humpback {
 
 	void Renderer::Initialize()
 	{
+		/*LoadPipeline();
 		Prepare();
-		LoadPipeline();
-		LoadAssets();
+		LoadAssets();*/
+		_createDescriptorHeaps();
+		_createConstantBuffers();
 	}
 
 	void Renderer::Update()
@@ -90,10 +103,8 @@ namespace Humpback {
 		m_timer = std::make_unique<Timer>();
 		m_timer->Reset();
 
-		// Crate a box.
-		m_renderableList = new std::vector<Renderable*>;
-		Box* box = new Box();
-		m_renderableList->push_back(box);
+		_createBox();
+		_createPso();
 	}
 
 	void Renderer::LoadPipeline()
@@ -242,7 +253,7 @@ namespace Humpback {
 			D3D12_INPUT_ELEMENT_DESC inputDescs[] =
 			{
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+				//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 			};
 
 			// Create the pipeline state.
@@ -270,39 +281,52 @@ namespace Humpback {
 
 		// Create the vertex buffer.
 		{
-			Vertex vertices[] =
+			/*Vertex vertices[] =
 			{
 				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {0.5f, 0.0f}},
 				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f}},
 				{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f}}
-			};
+			};*/
 
-			// The memory size of the vertex array.
-			const unsigned int vertexBufferSize = sizeof(vertices);
+			/*if (m_box == nullptr)
+			{
+				return;
+			}
 
-			D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-			D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+			Mesh* boxMesh = m_box->GetMesh();
+			auto boxVec = boxMesh->GetVertices();*/
 
-			ThrowIfFailed(m_device->CreateCommittedResource(
-				&heapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&resourceDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_vertexBuffer)
-			));
 
-			// Copy the triangle data to the vertex buffer.
-			UINT8* pVertexDataBegin;
-			CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-			memcpy(pVertexDataBegin, vertices, sizeof(vertices));
-			m_vertexBuffer->Unmap(0, nullptr);
 
-			// Initialize the vertex buffer view.
-			m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-			m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-			m_vertexBufferView.SizeInBytes = vertexBufferSize;
+			//Vertex* vertices = &((*boxVec)[0]);
+
+
+			//// The memory size of the vertex array.
+			//const unsigned int vertexBufferSize = sizeof(boxMesh->GetVertices()->size());
+
+			//D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			//D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+
+			//ThrowIfFailed(m_device->CreateCommittedResource(
+			//	&heapProperties,
+			//	D3D12_HEAP_FLAG_NONE,
+			//	&resourceDesc,
+			//	D3D12_RESOURCE_STATE_GENERIC_READ,
+			//	nullptr,
+			//	IID_PPV_ARGS(&m_vertexBuffer)
+			//));
+
+			//// Copy the triangle data to the vertex buffer.
+			//UINT8* pVertexDataBegin;
+			//CD3DX12_RANGE readRange(0, 0);
+			//ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+			//memcpy(pVertexDataBegin, vertices, sizeof(vertices));
+			//m_vertexBuffer->Unmap(0, nullptr);
+
+			//// Initialize the vertex buffer view.
+			//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+			//m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+			//m_vertexBufferView.SizeInBytes = vertexBufferSize;
 		}
 
 	
@@ -481,5 +505,134 @@ namespace Humpback {
 		}
 
 		return data;
+	}
+
+	void Renderer::_createBox()
+	{
+		// Define vertices.
+		std::array<Vertex, 8> vertices =
+		{
+			Vertex({ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::White) }),
+			Vertex({ XMFLOAT3(-1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Black) }),
+			Vertex({ XMFLOAT3(+1.0f, +1.0f, -1.0f), XMFLOAT4(Colors::Red) }),
+			Vertex({ XMFLOAT3(+1.0f, -1.0f, -1.0f), XMFLOAT4(Colors::Green) }),
+			Vertex({ XMFLOAT3(-1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Blue) }),
+			Vertex({ XMFLOAT3(-1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Yellow) }),
+			Vertex({ XMFLOAT3(+1.0f, +1.0f, +1.0f), XMFLOAT4(Colors::Cyan) }),
+			Vertex({ XMFLOAT3(+1.0f, -1.0f, +1.0f), XMFLOAT4(Colors::Magenta) })
+		};
+
+		// Define indices.
+		std::array<std::uint16_t, 36> indices =
+		{
+			// front face
+			0, 1, 2,
+			0, 2, 3,
+
+			// back face
+			4, 6, 5,
+			4, 7, 6,
+
+			// left face
+			4, 5, 1,
+			4, 1, 0,
+
+			// right face
+			3, 2, 6,
+			3, 6, 7,
+
+			// top face
+			1, 5, 6,
+			1, 6, 2,
+
+			// bottom face
+			4, 0, 3,
+			4, 3, 7
+		};
+
+		const unsigned int vByteSize = (unsigned int)vertices.size() * sizeof(Vertex);
+		const unsigned int iByteSize = (unsigned int)indices.size() * sizeof(uint16_t);
+
+		m_mesh = std::make_unique<Mesh>();
+		m_mesh->Name = "MyBox";
+
+		ThrowIfFailed(D3DCreateBlob(vByteSize, &m_mesh->VertexBufferCPU));
+		CopyMemory(m_mesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), vByteSize);
+
+		ThrowIfFailed(D3DCreateBlob(iByteSize, &m_mesh->IndexBufferCPU));
+		CopyMemory(m_mesh->IndexBufferCPU->GetBufferPointer(), indices.data(), iByteSize);
+		
+		m_mesh->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			vertices.data(), vByteSize, m_mesh->VertexBufferUploader);
+
+		m_mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			indices.data(), iByteSize, m_mesh->IndexBufferUploader);
+
+		m_mesh->vertexByteStride = sizeof(Vertex);
+		m_mesh->vertexBufferByteSize = vByteSize;
+		m_mesh->indexFormat = DXGI_FORMAT_R16_UINT;
+		m_mesh->indexBufferByteSize = iByteSize;
+
+		SubMesh boxSubMesh;
+		boxSubMesh.baseVertexLocation = 0;
+		boxSubMesh.startIndexLocation = 0;
+		boxSubMesh.indexCount = (unsigned int)indices.size();
+
+		m_mesh->drawArgs["Box"] = boxSubMesh;
+	}
+
+	void Renderer::_createDescriptorHeaps()
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC cbvDesc;
+		cbvDesc.NumDescriptors = 1;
+		cbvDesc.NodeMask = 0;
+		cbvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		cbvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvDesc, IID_PPV_ARGS(&m_cbvHeap)));
+	}
+
+	void Renderer::_createConstantBuffers()
+	{
+		m_constantBuffer = std::make_unique<UploadBuffer<ObjectConstants>>();
+
+		unsigned int objCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
+
+		D3D12_GPU_VIRTUAL_ADDRESS cbAdress = m_constantBuffer->Resource()->GetGPUVirtualAddress();
+
+		// Offset to the ith object constant buffer in the buffer.
+		int objectIdx = 0;
+		cbAdress += objCBufferSize * cbAdress;
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbDesc;
+		cbDesc.SizeInBytes = objCBufferSize;
+		cbDesc.BufferLocation = cbAdress;
+
+		m_device->CreateConstantBufferView(&cbDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+	}
+
+	void Renderer::_createShadersAndInputLayout()
+	{
+		UINT compileFlags = 0;
+
+		std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
+		std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
+		vsPath = GetAssetPath(vsPath);
+		psPath = GetAssetPath(psPath);
+
+		m_vertexShader = LoadBinary(vsPath);
+		m_pixelShader = LoadBinary(psPath);
+
+		m_inputLayout = {
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		};
+	}
+
+	void Renderer::_createPso()
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
+		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		// TODO
+
 	}
 }

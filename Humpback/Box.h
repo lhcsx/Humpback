@@ -19,6 +19,7 @@ namespace Humpback
 		virtual void Initialize() override;
 		virtual void Render() override;
 
+		Mesh* GetMesh();
 
 	private:
 

@@ -1,5 +1,5 @@
 // (c) Li Hongcheng
-// 2021/10/28
+// 2021-10-28
 
 #pragma once
 
@@ -12,11 +12,21 @@
 #include "d3dx12.h"
 #include "Timer.h"
 #include "Renderable.h"
+#include "Mesh.h"
+#include "UploadBufferHelper.h"
 
 using Microsoft::WRL::ComPtr;
 
 
-namespace Humpback {
+namespace Humpback 
+{
+
+	struct ObjectConstants
+	{
+		XMFLOAT4X4 MVP = HMathHelper::Identity4x4();
+	};
+
+
 	class Renderer
 	{
 	public:
@@ -46,18 +56,19 @@ namespace Humpback {
 
 	private:
 
-		struct Vertex
-		{
-			DirectX::XMFLOAT3 position;
-			DirectX::XMFLOAT2 uv;
-		};
-
 		void Clear();
 		void LoadPipeline();
 		void LoadAssets();
 		void WaitForPreviousFrame();
 		void PopulateCommandList();
 		std::vector<UINT8>	GenerateTextureData();
+
+		// TODO - Need remove to Box.cpp.
+		void _createBox();
+		void _createDescriptorHeaps();
+		void _createConstantBuffers();
+		void _createShadersAndInputLayout();
+		void _createPso();
 
 		std::unique_ptr<Timer>				m_timer;
 
@@ -66,6 +77,7 @@ namespace Humpback {
 		ComPtr<IDXGISwapChain4>				m_swapChain;
 		ComPtr<ID3D12DescriptorHeap>		m_rtvHeap;
 		ComPtr<ID3D12DescriptorHeap>		m_srvHeap;
+		ComPtr<ID3D12DescriptorHeap>		m_cbvHeap = nullptr;
 		ComPtr<ID3D12Resource>				m_renderTargets[Renderer::BufferCount];
 		ComPtr<ID3D12CommandAllocator>		m_commandAllocator;
 		ComPtr<ID3D12RootSignature>			m_rootSignature;
@@ -73,6 +85,13 @@ namespace Humpback {
 		ComPtr<ID3D12GraphicsCommandList>	m_commandList;
 		ComPtr<ID3D12Resource>				m_vertexBuffer;
 		ComPtr<ID3D12Resource>				m_texture;
+
+		ComPtr<ID3DBlob>					m_vertexShader = nullptr;
+		ComPtr<ID3DBlob>					m_pixelShader = nullptr;
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
+
+		std::unique_ptr<UploadBuffer<ObjectConstants>> m_constantBuffer = nullptr;
 		
 		ComPtr<ID3D12Fence>					m_fence;
 		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
@@ -92,6 +111,9 @@ namespace Humpback {
 		UINT								m_rtvDescriptorSize;
 
 		POINT								m_lastMousePoint;
+
+		//Box*								m_box = nullptr;
+		std::unique_ptr<Mesh>				m_mesh = nullptr;
 	};
 }
 
