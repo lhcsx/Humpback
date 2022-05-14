@@ -67,6 +67,7 @@ namespace Humpback
 		void _createBox();
 		void _createDescriptorHeaps();
 		void _createConstantBuffers();
+		void _createRootSignature();
 		void _createShadersAndInputLayout();
 		void _createPso();
 

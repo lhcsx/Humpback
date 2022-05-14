@@ -157,6 +157,7 @@
     <ClInclude Include="D3DUtil.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="HMathHelper.h" />
     <ClInclude Include="HumpbackHelper.h" />
     <ClInclude Include="Humpback.h" />
     <ClInclude Include="Mesh.h" />
