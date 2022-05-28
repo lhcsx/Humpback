@@ -35,9 +35,8 @@ namespace Humpback
 
 	void Renderer::Initialize()
 	{
-		/*LoadPipeline();
-		Prepare();
-		LoadAssets();*/
+		//LoadPipeline();
+		//Prepare();
 		_createDescriptorHeaps();
 		_createConstantBuffers();
 		_createRootSignature();
@@ -185,236 +184,6 @@ namespace Humpback
 			}
 		}
 		ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
-	}
-
-	void Renderer::LoadAssets()
-	{
-		// Create an empty root signature.
-		//{
-		//	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-
-		//	// This is the highest version the sample supports. If ChectFeatureSupport succeeds, the HightesVersion returned will not greater than this.			
-		//	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-		//	if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
-		//	{
-		//		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-		//	}
-
-		//	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		//	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-
-		//	CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-		//	rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
-
-		//	D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
-		//	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		//	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		//	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		//	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		//	samplerDesc.MipLODBias = 0;
-		//	samplerDesc.MaxAnisotropy = 0;
-		//	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		//	samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		//	samplerDesc.MinLOD = 0.0f;
-		//	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-		//	samplerDesc.ShaderRegister = 0;
-		//	samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-		//	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-		//	rootSignatureDesc.Init_1_1(_countof(rootParameters), &rootParameters[0], 1, &samplerDesc, 
-		//		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-
-			/*ComPtr<ID3DBlob> signature;
-			ComPtr<ID3DBlob> error;
-			ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-			ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));*/
-		//}
-
-		// Create the pipeline state, which includes compiling and loading shaders.
-		//{
-		//	ComPtr<ID3DBlob> vertexShader;
-		//	ComPtr<ID3DBlob> pixelShader;
-
-		//	UINT compileFlags = 0;
-
-		//	std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
-		//	std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
-		//	vsPath = GetAssetPath(vsPath);
-		//	psPath = GetAssetPath(psPath);
-
-		//	/*ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		//	ThrowIfFailed(D3DCompileFromFile(path.c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));*/
-
-		//	vertexShader = LoadBinary(vsPath);
-		//	pixelShader = LoadBinary(psPath);
-
-
-		//	// Input layout.
-		//	D3D12_INPUT_ELEMENT_DESC inputDescs[] =
-		//	{
-		//		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		//		//{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		//	};
-
-		//	// Create the pipeline state.
-		//	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		//	psoDesc.InputLayout = { inputDescs, _countof(inputDescs) };
-		//	psoDesc.pRootSignature = m_rootSignature.Get();
-		//	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		//	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		//	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		//	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		//	psoDesc.DepthStencilState.DepthEnable = false;
-		//	psoDesc.DepthStencilState.StencilEnable = false;
-		//	psoDesc.SampleMask = UINT_MAX;
-		//	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		//	psoDesc.NumRenderTargets = 1;
-		//	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//	psoDesc.SampleDesc.Count = 1;
-		//	
-		//	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-		//}
-
-		//// Create the command list.
-		//ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(),
-		//	IID_PPV_ARGS(&m_commandList)));
-
-		// Create the vertex buffer.
-		{
-			/*Vertex vertices[] =
-			{
-				{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {0.5f, 0.0f}},
-				{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {1.0f, 1.0f}},
-				{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f}}
-			};*/
-
-			/*if (m_box == nullptr)
-			{
-				return;
-			}
-
-			Mesh* boxMesh = m_box->GetMesh();
-			auto boxVec = boxMesh->GetVertices();*/
-
-
-
-			//Vertex* vertices = &((*boxVec)[0]);
-
-
-			//// The memory size of the vertex array.
-			//const unsigned int vertexBufferSize = sizeof(boxMesh->GetVertices()->size());
-
-			//D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-			//D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-
-			//ThrowIfFailed(m_device->CreateCommittedResource(
-			//	&heapProperties,
-			//	D3D12_HEAP_FLAG_NONE,
-			//	&resourceDesc,
-			//	D3D12_RESOURCE_STATE_GENERIC_READ,
-			//	nullptr,
-			//	IID_PPV_ARGS(&m_vertexBuffer)
-			//));
-
-			//// Copy the triangle data to the vertex buffer.
-			//UINT8* pVertexDataBegin;
-			//CD3DX12_RANGE readRange(0, 0);
-			//ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-			//memcpy(pVertexDataBegin, vertices, sizeof(vertices));
-			//m_vertexBuffer->Unmap(0, nullptr);
-
-			//// Initialize the vertex buffer view.
-			//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-			//m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-			//m_vertexBufferView.SizeInBytes = vertexBufferSize;
-		}
-
-	
-		// Create texture.
-		// This resource needs to stay in scope until the command list that references it
-		// has finished executing on the GPU.
-		//ComPtr<ID3D12Resource> textureUploadHeap;
-		//
-		//{
-		//	// Describe and create a texture.
-		//	D3D12_RESOURCE_DESC textureDesc = {};
-		//	textureDesc.MipLevels = 1;
-		//	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//	textureDesc.SampleDesc.Count = 1;
-		//	textureDesc.SampleDesc.Quality = 0;
-		//	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		//	textureDesc.Width = TextureWidth;
-		//	textureDesc.Height = TextureHeight;
-		//	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		//	textureDesc.DepthOrArraySize = 1;
-
-
-		//	auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-		//	ThrowIfFailed(m_device->CreateCommittedResource(
-		//		&defaultHeapProperties,
-		//		D3D12_HEAP_FLAG_NONE,
-		//		&textureDesc,
-		//		D3D12_RESOURCE_STATE_COPY_DEST,
-		//		nullptr,
-		//		IID_PPV_ARGS(&m_texture)));
-
-
-		//	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-
-		//	// Create the GPU upload buffer.
-		//	auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		//	auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-		//	ThrowIfFailed(m_device->CreateCommittedResource(
-		//		&uploadHeapProperties,
-		//		D3D12_HEAP_FLAG_NONE,
-		//		&uploadBufferDesc,
-		//		D3D12_RESOURCE_STATE_GENERIC_READ,
-		//		nullptr,
-		//		IID_PPV_ARGS(&textureUploadHeap)));
-
-
-		//	// Copy data to the intermediate upload heap and then shedule a copy
-		//	// from the upload heap to the Texture2D.
-		//	std::vector<UINT8> texture = GenerateTextureData();
-
-		//	D3D12_SUBRESOURCE_DATA textureData = {};
-		//	textureData.pData = &texture[0];
-		//	textureData.RowPitch = TextureWidth * TexturePixelSize;
-		//	textureData.SlicePitch = textureData.RowPitch * TextureHeight;
-
-		//	UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
-		//	auto copyDest2ShaderResource = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		//	m_commandList->ResourceBarrier(1, &copyDest2ShaderResource);
-
-		//	// Describ and create a SRV for the texture.
-		//	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		//	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		//	srvDesc.Format = textureDesc.Format;
-		//	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		//	srvDesc.Texture2D.MipLevels = 1;
-		//	m_device->CreateShaderResourceView(m_texture.Get(), &srvDesc, m_srvHeap->GetCPUDescriptorHandleForHeapStart());
-		//}
-
-		//// Close the command list and execute it to begin the initial GPU setup.
-		//ThrowIfFailed(m_commandList->Close());
-		//ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
-		//m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
-		//
-
-		//// Create the synchronization objects and wait until assets have been uploaded to the GPU.
-		//{
-		//	ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		//	m_fenceValue = 1;
-		//	m_fenceEvent = CreateEvent(nullptr, false, false, nullptr);
-		//	if (m_fenceEvent == nullptr)
-		//	{
-		//		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		//	}
-
-		//	// Wait for setup to compelete before continuing.
-		//	WaitForPreviousFrame();
-		//}
 	}
 
 	void Renderer::WaitForPreviousFrame()
@@ -660,7 +429,28 @@ namespace Humpback
 	{
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-		// TODO
-
+		psoDesc.InputLayout = { m_inputLayout.data(), (unsigned int)m_inputLayout.size() };
+		psoDesc.pRootSignature = m_rootSignature.Get();
+		psoDesc.VS =
+		{
+			reinterpret_cast<byte*>(m_vertexShader->GetBufferPointer()),
+			m_vertexShader->GetBufferSize()
+		};
+		psoDesc.PS =
+		{
+			reinterpret_cast<byte*>(m_pixelShader->GetBufferPointer()),
+			m_pixelShader->GetBufferSize()
+		};
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = m_rtFormat;
+		psoDesc.SampleDesc.Count = m_4xMsaaState ? 4 : 1;
+		psoDesc.SampleDesc.Quality = m_4xMsaaState ? (m_4xMsaaQuality - 1) : 0;
+		psoDesc.DSVFormat = m_dsFormat;
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 }

@@ -97,6 +97,10 @@ namespace Humpback
 		ComPtr<ID3D12Fence>					m_fence;
 		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
 		HANDLE								m_fenceEvent;
+		DXGI_FORMAT							m_rtFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		DXGI_FORMAT							m_dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		bool								m_4xMsaaState = false;
+		int									m_4xMsaaQuality = 0;
 
 		std::vector<Renderable*>*			m_renderableList;
 
