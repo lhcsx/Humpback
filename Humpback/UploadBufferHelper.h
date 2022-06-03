@@ -1,9 +1,14 @@
 // (c) Li Hongcheng
 // 2022/01/08
 
-#include "D3DUtil.h"
+#pragma once
 
-namespace Humpback {
+#include "D3DUtil.h"
+#include "d3dx12.h"
+
+namespace Humpback 
+{
+	inline void ThrowIfFailed(HRESULT hr);
 
 template<typename T>
 class UploadBuffer
@@ -37,6 +42,11 @@ public:
 		ThrowIfFailed(m_uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedData)));
 	}
 
+	UploadBuffer()
+	{
+
+	}
+
 	UploadBuffer(const UploadBuffer& rhs) = delete;
 	UploadBuffer& operator=(const UploadBuffer& rhs) = delete;
 	~UploadBuffer()
@@ -61,7 +71,7 @@ public:
 
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_uploadBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_uploadBuffer = nullptr;
 
 	byte* m_mappedData = nullptr;
 

@@ -22,15 +22,10 @@
 #include <fstream>
 #include <sstream>
 #include <cassert>
-#include "d3dx12.h"
-
-#include "HumpbackHelper.h"
-
 
 
 namespace Humpback 
 {
-
     class D3DUtil
     {
     public:

@@ -9,21 +9,52 @@
 #include <DirectXMath.h>
 #include <memory>
 
-#include "d3dx12.h"
 #include "Timer.h"
-#include "Renderable.h"
-#include "Mesh.h"
 #include "UploadBufferHelper.h"
+#include "HMathHelper.h"
 
 using Microsoft::WRL::ComPtr;
 
 
 namespace Humpback 
 {
-
 	struct ObjectConstants
 	{
-		XMFLOAT4X4 MVP = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 MVP = HMathHelper::Identity4x4();
+	};
+
+	struct SubMesh
+	{
+	public:
+
+		unsigned int indexCount;
+		unsigned int startIndexLocation;
+		int baseVertexLocation;
+	};
+
+	struct Mesh
+	{
+	public:
+
+		Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferCPU = nullptr;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferGPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferGPU = nullptr;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
+
+		// Data about the buffers.
+		unsigned int vertexByteStride = 0;
+		unsigned int vertexBufferByteSize = 0;
+		DXGI_FORMAT indexFormat = DXGI_FORMAT_R16_UINT;
+
+		unsigned int indexBufferByteSize = 0;
+
+		std::string Name;
+
+		std::unordered_map<std::string, SubMesh> drawArgs;
 	};
 
 
@@ -43,7 +74,6 @@ namespace Humpback
 		static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
 
 		void Initialize();
-		void Prepare();
 		void Update();
 		void Render();
 		void Tick();
@@ -57,13 +87,9 @@ namespace Humpback
 	private:
 
 		void Clear();
-		void LoadPipeline();
-		void LoadAssets();
 		void WaitForPreviousFrame();
 		void PopulateCommandList();
-		std::vector<UINT8>	GenerateTextureData();
 
-		// TODO - Need remove to Box.cpp.
 		void _createBox();
 		void _createDescriptorHeaps();
 		void _createConstantBuffers();
@@ -102,8 +128,6 @@ namespace Humpback
 		bool								m_4xMsaaState = false;
 		int									m_4xMsaaQuality = 0;
 
-		std::vector<Renderable*>*			m_renderableList;
-
 		UINT m_width;
 		UINT m_height;
 		UINT m_frameIndex;
@@ -116,9 +140,8 @@ namespace Humpback
 		UINT								m_rtvDescriptorSize;
 
 		POINT								m_lastMousePoint;
-
-		//Box*								m_box = nullptr;
-		std::unique_ptr<Mesh>				m_mesh = nullptr;
+		
+		std::unique_ptr<Mesh>				m_mesh;
 	};
 }
 

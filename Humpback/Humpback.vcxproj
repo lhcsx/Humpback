@@ -151,7 +151,6 @@
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Box.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="d3d12.h" />
     <ClInclude Include="D3DUtil.h" />
@@ -160,7 +159,6 @@
     <ClInclude Include="HMathHelper.h" />
     <ClInclude Include="HumpbackHelper.h" />
     <ClInclude Include="Humpback.h" />
-    <ClInclude Include="Mesh.h" />
     <ClInclude Include="Renderable.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
@@ -170,12 +168,9 @@
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Box.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D3DUtil.cpp" />
     <ClCompile Include="Humpback.cpp" />
-    <ClCompile Include="HumpbackMathHelper.cpp" />
-    <ClCompile Include="HumpbackMathHelper.h" />
     <ClCompile Include="Renderable.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Timer.cpp" />

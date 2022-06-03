@@ -10,9 +10,7 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <fstream>
-
-#include "Vertex.h"
-#include "Mesh.h"
+#include <dxgi1_6.h>
 
 namespace Humpback 
 {
@@ -102,4 +100,3 @@ namespace Humpback
 		return blob;
 	}
 }
-

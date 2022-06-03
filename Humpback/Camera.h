@@ -5,7 +5,7 @@
 
 #include <DirectXMath.h>
 
-#include "HumpbackMathHelper.h"
+#include "HMathHelper.h"
 
 namespace Humpback{
 
@@ -77,7 +77,7 @@ namespace Humpback{
 
 		bool m_viewDirty = true;
 
-		DirectX::XMFLOAT4X4 m_viewMatrix = HumpbackMathHelper::IdentityMatrixF4x4();
-		DirectX::XMFLOAT4X4 m_projectionMatrix = HumpbackMathHelper::IdentityMatrixF4x4();
+		DirectX::XMFLOAT4X4 m_viewMatrix = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 m_projectionMatrix = HMathHelper::Identity4x4();
 	};
 }
