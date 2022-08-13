@@ -30,7 +30,7 @@ namespace Humpback {
 
 		double m_deltaTime;
 
-		bool m_stopped;
+		bool m_stopped = false;
 
 	};
 }

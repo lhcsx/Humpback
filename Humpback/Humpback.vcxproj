@@ -170,6 +170,7 @@
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D3DUtil.cpp" />
+    <ClCompile Include="HMathHelper.cpp" />
     <ClCompile Include="Humpback.cpp" />
     <ClCompile Include="Renderable.cpp" />
     <ClCompile Include="Renderer.cpp" />

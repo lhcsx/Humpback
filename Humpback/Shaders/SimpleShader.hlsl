@@ -2,28 +2,36 @@
 // 2021/10/28
 
 
-struct PSInput
+cbuffer cbPerObject : register(b0)
 {
-    float4 position : SV_POSITION;
-    //float2 uv : TEXCOORD;
+    float4x4 gWorldViewProj;
 };
 
-Texture2D g_texture : register(t0);
-SamplerState g_sampler : register(s0);
+struct VertexIn
+{
+    flaot3 PosL : POSITION;
+    flaot4 Color : COLOR;
+};
 
-PSInput VSMain(float4 position : POSITION)
+
+struct PSInput
+{
+    float4 PosH : SV_POSITION;
+    float4 Color: COLOR;
+};
+
+
+PSInput VSMain(VertexIn vin)
 {
     PSInput result;
 
-    result.position = position;
-    //result.uv = uv;
+    result.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
+    result.Color = vin.Color;
 
     return result;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-     return float4(input.uv, 1.0, 1.0);
-
-    //return g_texture.Sample(g_sampler, input.uv);
+    return float4(1.0, 0.0, 0.0, 1.0);
 }

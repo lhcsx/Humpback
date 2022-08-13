@@ -21,5 +21,7 @@ namespace Humpback
 				.0f, .0f, .0f, 1.f
 			);
 		}
+
+		static const float PI;
 	};
 }
