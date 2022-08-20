@@ -23,8 +23,8 @@ using namespace DirectX::Colors;
 namespace Humpback 
 {
 	Renderer::Renderer(int width, int height, HWND hwnd) :
-		m_width(width), m_height(height), m_frameIndex(0), m_hwnd(hwnd), 
-		m_aspectRatio(m_width / m_height), m_fenceValue(0), m_viewPort(0.f, 0.f, m_width, m_height),
+		m_width(width), m_height(height), m_hwnd(hwnd), 
+		m_aspectRatio(static_cast<float>(m_width) / m_height), m_viewPort(0.f, 0.f, m_width, m_height),
 		m_scissorRect(0, 0, m_width, m_height)
 
 	{
@@ -40,7 +40,10 @@ namespace Humpback
 
 		// ******common*********
 		_initD3D12();
+		OnResize();
 		// *********************
+
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
 		_createDescriptorHeaps();
 		_createConstantBuffers();
@@ -49,17 +52,22 @@ namespace Humpback
 		_createBox();
 		_createPso();
 
-		//ThrowIfFailed(m_commandList->Close());
+		ThrowIfFailed(m_commandList->Close());
 		ID3D12CommandList* commandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
 
-		OnResize();
 	}
 
 	void Renderer::Update()
 	{
+		// Convert Spherical to Cartesian coordinates.
+		float x = m_radius * sinf(m_phi) * cosf(m_theta);
+		float z = m_radius * sinf(m_phi) * sinf(m_theta);
+		float y = m_radius * cosf(m_phi);
+
+
 		// Build the view matrix.
-		XMVECTOR cameraPos = XMVectorSet(.0f, .0f, -10.0f, 1.0f);
+		XMVECTOR cameraPos = XMVectorSet(x, y, z, 1.0f);
 		XMVECTOR cameraTarget = XMVectorZero();
 		XMVECTOR cameraUp = XMVectorSet(.0f, 1.0f, 0.0f, 0.0f);
 
@@ -74,7 +82,7 @@ namespace Humpback
 		
 		// Update the constant buffer with the latest mvp matrix.
 		ObjectConstants oc;
-		XMStoreFloat4x4(&oc.MVP, mvp);
+		XMStoreFloat4x4(&oc.MVP, XMMatrixTranspose(mvp));
 		m_constantBuffer->CopyData(0, oc);
 	}
 
@@ -94,7 +102,7 @@ namespace Humpback
 		m_commandList->ResourceBarrier(1, &transP2R);
 
 		// Clear depth and color buffers.
-		m_commandList->ClearRenderTargetView(_getCurrentBackBufferView(), Colors::Gray, 0, nullptr);
+		m_commandList->ClearRenderTargetView(_getCurrentBackBufferView(), Colors::DarkGray, 0, nullptr);
 		m_commandList->ClearDepthStencilView(_getCurrentDSBufferView(), 
 			D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
@@ -202,7 +210,7 @@ namespace Humpback
 
 		_updateTheViewport();
 
-		XMMATRIX p = XMMatrixPerspectiveFovLH(0.5 * HMathHelper::PI, m_aspectRatio, m_near, m_far);
+		XMMATRIX p = XMMatrixPerspectiveFovLH(0.25f * HMathHelper::PI, m_aspectRatio, m_near, m_far);
 		XMStoreFloat4x4(&m_projectionMatrix, p);
 	}
 
@@ -221,7 +229,7 @@ namespace Humpback
 		_cleanUp();
 	}
 
-	void Renderer::OnMouseDown(int x, int y)
+	void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
 	{
 		m_lastMousePoint.x = x;
 		m_lastMousePoint.y = y;
@@ -236,7 +244,28 @@ namespace Humpback
 
 	void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
 	{
-		// TODO
+		if ((btnState & MK_LBUTTON) != 0)
+		{
+			float dx = XMConvertToRadians(0.25 * static_cast<float>(x - m_lastMousePoint.x));
+			float dy = XMConvertToRadians(0.25 * static_cast<float>(y - m_lastMousePoint.y));
+
+			m_theta += dx;
+			m_phi += dy;
+
+			m_phi = HMathHelper::Clamp(m_phi, 0.1f, HMathHelper::PI - 0.1f);
+		}
+		else if((btnState & MK_RBUTTON) != 0)
+		{
+			float dx = 0.005f * static_cast<float>(x - m_lastMousePoint.x);
+			float dy = 0.005f * static_cast<float>(y - m_lastMousePoint.y);
+
+			m_radius += dx - dy;
+
+			m_radius = HMathHelper::Clamp(m_radius, 3.0f, 15.0f);
+		}
+
+		m_lastMousePoint.x = x;
+		m_lastMousePoint.y = y;
 	}
 
 	void Renderer::_cleanUp()
@@ -258,7 +287,7 @@ namespace Humpback
 			WaitForSingleObject(m_fenceEvent, INFINITY);
 		}
 
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+		//m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 
 	void Renderer::_createBox()
@@ -491,15 +520,22 @@ namespace Humpback
 
 	void Renderer::_createShadersAndInputLayout()
 	{
-		UINT compileFlags = 0;
+		// Load shaders pre-compiled.
+		//std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
+		//std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
+		//vsPath = GetAssetPath(vsPath);
+		//psPath = GetAssetPath(psPath);
 
-		std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
-		std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
-		vsPath = GetAssetPath(vsPath);
-		psPath = GetAssetPath(psPath);
+		//m_vertexShader = LoadBinary(vsPath);
+		//m_pixelShader = LoadBinary(psPath);
 
-		m_vertexShader = LoadBinary(vsPath);
-		m_pixelShader = LoadBinary(psPath);
+		
+		// Compile shaders in Runtime for debugging.
+		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
+		std::wstring shaderFullPath = GetAssetPath(shaderPath);
+		m_vertexShader = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
+		m_pixelShader = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
+
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},

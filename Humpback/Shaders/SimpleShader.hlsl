@@ -9,8 +9,8 @@ cbuffer cbPerObject : register(b0)
 
 struct VertexIn
 {
-    flaot3 PosL : POSITION;
-    flaot4 Color : COLOR;
+    float3 PosL : POSITION;
+    float4 Color : COLOR;
 };
 
 
@@ -33,5 +33,5 @@ PSInput VSMain(VertexIn vin)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return float4(1.0, 0.0, 0.0, 1.0);
+    return input.Color;
 }

@@ -60,7 +60,7 @@ namespace Humpback
 		{
 			D3D12_VERTEX_BUFFER_VIEW vbv;
 			vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
-			vbv.StrideInBytes = vertexBufferByteSize;
+			vbv.StrideInBytes = vertexByteStride;
 			vbv.SizeInBytes = vertexBufferByteSize;
 			return vbv;
 		}
@@ -86,9 +86,9 @@ namespace Humpback
 		~Renderer();
 
 		static const UINT FrameBufferCount = 2;
-		static const UINT TextureWidth = 256;
-		static const UINT TextureHeight = 256;
-		static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
+		//static const UINT TextureWidth = 256;
+		//static const UINT TextureHeight = 256;
+		//static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
 
 		void Initialize();
 		void OnResize();
@@ -98,7 +98,7 @@ namespace Humpback
 		void ShutDown();
 
 
-		void OnMouseDown(int x, int y);
+		void OnMouseDown(WPARAM btnState, int x, int y);
 		void OnMouseUp();
 		void OnMouseMove(WPARAM btnState, int x, int y);
 
@@ -151,29 +151,31 @@ namespace Humpback
 		
 		ComPtr<ID3D12Fence>					m_fence = nullptr;
 		HANDLE								m_fenceEvent = 0;
-		D3D12_VERTEX_BUFFER_VIEW			m_vertexBufferView;
 		DXGI_FORMAT							m_frameBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 		DXGI_FORMAT							m_dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		bool								m_4xMsaaState = false;
 		int									m_4xMsaaQuality = 0;
 
-		UINT m_width;
-		UINT m_height;
-		UINT m_frameIndex;
-		HWND m_hwnd;
+		UINT								m_width;
+		UINT								m_height;
+		UINT								m_frameIndex = 0;
+		HWND								m_hwnd;
 		float								m_aspectRatio;
 		float								m_near = 1.0f;
 		float								m_far = 1000.0f;
-		std::wstring m_directory;
-		UINT m_fenceValue;
+		std::wstring						m_directory;
+		UINT								m_fenceValue = 0;
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
 		UINT								m_rtvDescriptorSize = 0;
-
 		POINT								m_lastMousePoint;
+		
+		float								m_theta = 1.5f * DirectX::XM_PI;
+		float								m_phi = DirectX::XM_PIDIV4;
+		float								m_radius = 5.0f;
 
-		DirectX::XMFLOAT4X4							m_viewMatrix;
-		DirectX::XMFLOAT4X4							m_projectionMatrix;
+		DirectX::XMFLOAT4X4					m_viewMatrix;
+		DirectX::XMFLOAT4X4					m_projectionMatrix;
 		
 		std::unique_ptr<Mesh>				m_mesh;
 	};
