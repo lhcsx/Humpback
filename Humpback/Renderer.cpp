@@ -34,6 +34,7 @@ namespace Humpback
 	{
 	}
 
+
 	void Renderer::Initialize()
 	{
 		m_timer = std::make_unique<Timer>();
@@ -46,11 +47,12 @@ namespace Humpback
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
 		_createDescriptorHeaps();
-		_createConstantBuffers();
+		_createConstantBufferViews();
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createBox();
 		_createPso();
+		_createFrameResources();
 
 		ThrowIfFailed(m_commandList->Close());
 		ID3D12CommandList* commandLists[] = { m_commandList.Get() };
@@ -58,7 +60,7 @@ namespace Humpback
 
 	}
 
-	void Renderer::Update()
+	void Renderer::_update()
 	{
 		// Convert Spherical to Cartesian coordinates.
 		float x = m_radius * sinf(m_phi) * cosf(m_theta);
@@ -82,11 +84,11 @@ namespace Humpback
 		
 		// Update the constant buffer with the latest mvp matrix.
 		ObjectConstants oc;
-		XMStoreFloat4x4(&oc.MVP, XMMatrixTranspose(mvp));
-		m_constantBuffer->CopyData(0, oc);
+		XMStoreFloat4x4(&oc.WorldM, XMMatrixTranspose(world));
+		//m_constantBuffer->CopyData(0, oc);
 	}
 
-	void Renderer::Render()
+	void Renderer::_render()
 	{
 		// Reuse the memory associated with command recording.
 		// We can only reset the associated command lists have finished execution on the GPU.
@@ -219,8 +221,8 @@ namespace Humpback
 	void Renderer::Tick()
 	{
 		m_timer->Tick();
-		Update();
-		Render();
+		_update();
+		_render();
 	}
 
 	void Renderer::ShutDown()
@@ -470,11 +472,11 @@ namespace Humpback
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvDesc, IID_PPV_ARGS(&m_cbvHeap)));
 	}
 
-	void Renderer::_createConstantBuffers()
+	void Renderer::_createConstantBufferViews()
 	{
-		m_constantBuffer = std::make_unique<UploadBuffer<ObjectConstants>>(m_device.Get(), 1, true);
-
 		unsigned int objCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
+
+
 
 		D3D12_GPU_VIRTUAL_ADDRESS cbAdress = m_constantBuffer->Resource()->GetGPUVirtualAddress();
 
@@ -530,7 +532,7 @@ namespace Humpback
 		//m_pixelShader = LoadBinary(psPath);
 
 		
-		// Compile shaders in Runtime for debugging.
+		// Compile shaders in Runtime for easily debugging.
 		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
 		std::wstring shaderFullPath = GetAssetPath(shaderPath);
 		m_vertexShader = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
@@ -572,9 +574,25 @@ namespace Humpback
 		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
+	void Renderer::_createRenderableObjects()
+	{
+		auto boxObject = std::make_unique<RenderableObject>();
+		//boxObject->
+		
+		// TODO
+	}
+
+	void Renderer::_createFrameResources()
+	{
+		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
+		{
+			m_frameResources.push_back(
+				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size()));
+		}
+	}
+
 	void Renderer::_updateTheViewport()
 	{
-		// Update the viewport.
 		m_viewPort.TopLeftX = 0;
 		m_viewPort.TopLeftY = 0;
 		m_viewPort.Width = static_cast<float>(m_width);

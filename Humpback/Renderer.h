@@ -3,77 +3,24 @@
 
 #pragma once
 
-#include <wrl.h>
-#include <dxgi1_5.h>
 #include <string>
-#include <DirectXMath.h>
 #include <memory>
 
+#include "Mesh.h"
+#include "FrameResource.h"
 #include "Timer.h"
 #include "UploadBufferHelper.h"
 #include "HMathHelper.h"
+#include "RenderableObject.h"
+
 
 using Microsoft::WRL::ComPtr;
 
 
 namespace Humpback 
 {
-	struct ObjectConstants
-	{
-		DirectX::XMFLOAT4X4 MVP = HMathHelper::Identity4x4();
-	};
 
-	struct SubMesh
-	{
-	public:
-
-		unsigned int indexCount;
-		unsigned int startIndexLocation;
-		int baseVertexLocation;
-	};
-
-	struct Mesh
-	{
-	public:
-
-		Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;
-		Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferCPU = nullptr;
-
-		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferGPU = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferGPU = nullptr;
-
-		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
-
-		// Data about the buffers.
-		unsigned int vertexByteStride = 0;
-		unsigned int vertexBufferByteSize = 0;
-		DXGI_FORMAT indexFormat = DXGI_FORMAT_R16_UINT;
-
-		unsigned int indexBufferByteSize = 0;
-
-		std::string Name;
-
-		std::unordered_map<std::string, SubMesh> drawArgs;
-
-		D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const
-		{
-			D3D12_VERTEX_BUFFER_VIEW vbv;
-			vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
-			vbv.StrideInBytes = vertexByteStride;
-			vbv.SizeInBytes = vertexBufferByteSize;
-			return vbv;
-		}
-
-		D3D12_INDEX_BUFFER_VIEW IndexBufferView() const
-		{
-			D3D12_INDEX_BUFFER_VIEW ibv;
-			ibv.BufferLocation = IndexBufferGPU->GetGPUVirtualAddress();
-			ibv.Format = indexFormat;
-			ibv.SizeInBytes = indexBufferByteSize;
-			return ibv;
-		}
-	};
+	const int FRAME_RESOURCE_COUNT = 3;
 
 
 	class Renderer
@@ -85,17 +32,13 @@ namespace Humpback
 		Renderer& operator= (const Renderer&) = delete;
 		~Renderer();
 
-		static const UINT FrameBufferCount = 2;
-		//static const UINT TextureWidth = 256;
-		//static const UINT TextureHeight = 256;
-		//static const UINT TexturePixelSize = 4; // The number of bytes used to represent a pixel in the texture.
+		static const unsigned int FrameBufferCount = 2;
 
-		void Initialize();
+		void Initialize();		// Initialize the rendering engine.
 		void OnResize();
-		void Update();
-		void Render();
-		void Tick();
-		void ShutDown();
+		void ShutDown();		// Shut down the engine and clean the resources.
+
+		void Tick();			// Tick the engine.
 
 
 		void OnMouseDown(WPARAM btnState, int x, int y);
@@ -114,12 +57,18 @@ namespace Humpback
 
 		void _createBox();
 		void _createDescriptorHeaps();
-		void _createConstantBuffers();
+		void _createConstantBufferViews();
 		void _createRootSignature();
 		void _createShadersAndInputLayout();
 		void _createPso();
+		void _createFrameResources();
+		void _createRenderableObjects();
 
 		void _updateTheViewport();
+
+		void _render();			// Render per frame.
+		void _update();			// Update per frame.
+
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -147,7 +96,9 @@ namespace Humpback
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
 
-		std::unique_ptr<UploadBuffer<ObjectConstants>> m_constantBuffer = nullptr;
+		std::vector<std::unique_ptr<FrameResource>>			m_frameResources;
+		FrameResource*						m_curFrameResource = nullptr;
+		int									m_curFrameResourceIdx = 0;
 		
 		ComPtr<ID3D12Fence>					m_fence = nullptr;
 		HANDLE								m_fenceEvent = 0;
@@ -156,18 +107,18 @@ namespace Humpback
 		bool								m_4xMsaaState = false;
 		int									m_4xMsaaQuality = 0;
 
-		UINT								m_width;
-		UINT								m_height;
-		UINT								m_frameIndex = 0;
+		unsigned int						m_width;
+		unsigned int						m_height;
+		unsigned int						m_frameIndex = 0;
 		HWND								m_hwnd;
 		float								m_aspectRatio;
 		float								m_near = 1.0f;
 		float								m_far = 1000.0f;
 		std::wstring						m_directory;
-		UINT								m_fenceValue = 0;
+		unsigned int						m_fenceValue = 0;
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
-		UINT								m_rtvDescriptorSize = 0;
+		unsigned int						m_rtvDescriptorSize = 0;
 		POINT								m_lastMousePoint;
 		
 		float								m_theta = 1.5f * DirectX::XM_PI;
@@ -178,6 +129,8 @@ namespace Humpback
 		DirectX::XMFLOAT4X4					m_projectionMatrix;
 		
 		std::unique_ptr<Mesh>				m_mesh;
+		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
+		std::vector<RenderableObject*>		m_opaqueRenderableList;
 	};
 }
 
