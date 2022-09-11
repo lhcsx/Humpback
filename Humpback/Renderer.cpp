@@ -39,10 +39,9 @@ namespace Humpback
 	{
 		m_timer = std::make_unique<Timer>();
 
-		// ******common*********
 		_initD3D12();
+
 		OnResize();
-		// *********************
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
@@ -51,6 +50,7 @@ namespace Humpback
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createBox();
+		_createRenderableObjects();
 		_createPso();
 		_createFrameResources();
 
@@ -464,35 +464,74 @@ namespace Humpback
 
 	void Renderer::_createDescriptorHeaps()
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC cbvDesc;
-		cbvDesc.NumDescriptors = 1;
-		cbvDesc.NodeMask = 0;
-		cbvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		cbvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvDesc, IID_PPV_ARGS(&m_cbvHeap)));
+		unsigned int objCount = m_opaqueRenderableList.size();
+
+		unsigned int descriptorsCount = (objCount + 1) * FRAME_RESOURCE_COUNT;
+		
+		m_passCbvOffset = objCount * FRAME_RESOURCE_COUNT;
+
+		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
+		cbvHeapDesc.NumDescriptors = descriptorsCount;
+		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		cbvHeapDesc.NodeMask = 0;
+
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
 	}
 
 	void Renderer::_createConstantBufferViews()
 	{
 		unsigned int objCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
 
+		unsigned int objCount = m_opaqueRenderableList.size();
 
+		// Create constant buffer view for each renderable object.
+		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
+		{
+			auto objectCB = m_frameResources[i]->objCBuffer->Resource();
+			for (size_t j = 0; j < objCount; j++)
+			{
+				D3D12_GPU_VIRTUAL_ADDRESS cbAddress = objectCB->GetGPUVirtualAddress();
 
-		D3D12_GPU_VIRTUAL_ADDRESS cbAdress = m_constantBuffer->Resource()->GetGPUVirtualAddress();
+				cbAddress += j * objCBufferSize;	// Offset to the constant buffer of target object.
+				
+				int heapIndex = i * objCount + j;
+				auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+				handle.Offset(heapIndex, m_cbvSrvUavDescriptorSize);
 
-		// Offset to the ith object constant buffer in the buffer.
-		int objectIdx = 0;
-		cbAdress += objCBufferSize * objectIdx;
+				D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+				cbvDesc.BufferLocation = cbAddress;
+				cbvDesc.SizeInBytes = objCBufferSize;
 
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbDesc;
-		cbDesc.SizeInBytes = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
-		cbDesc.BufferLocation = cbAdress;
+				m_device->CreateConstantBufferView(&cbvDesc, handle);
+			}
+		}
 
-		m_device->CreateConstantBufferView(&cbDesc, m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+		// Create constant buffert view for each pass.
+		unsigned int passCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(PassConstants));
+
+		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
+		{
+			auto passCB = m_frameResources[i]->passCBuffer->Resource();
+
+			D3D12_GPU_VIRTUAL_ADDRESS cbAddress = passCB->GetGPUVirtualAddress();
+
+			int heapIndex = m_passCbvOffset + m_frameIndex;
+			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+			handle.Offset(heapIndex, m_cbvSrvUavDescriptorSize);
+
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+			cbvDesc.BufferLocation = cbAddress;
+			cbvDesc.SizeInBytes = passCBufferSize;
+
+			m_device->CreateConstantBufferView(&cbvDesc, handle);
+		}
 	}
 
 	void Renderer::_createRootSignature()
 	{
+		// TODO
+
 		CD3DX12_ROOT_PARAMETER slotRootParameter[1];
 
 		// Create a descriptor table of CBV.
@@ -535,9 +574,9 @@ namespace Humpback
 		// Compile shaders in Runtime for easily debugging.
 		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
 		std::wstring shaderFullPath = GetAssetPath(shaderPath);
-		m_vertexShader = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
-		m_pixelShader = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
 
+		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
+		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -547,6 +586,8 @@ namespace Humpback
 
 	void Renderer::_createPso()
 	{
+		// TODO
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 		psoDesc.InputLayout = { m_inputLayout.data(), (unsigned int)m_inputLayout.size() };
@@ -576,10 +617,22 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
+		// Create the box object.
 		auto boxObject = std::make_unique<RenderableObject>();
-		//boxObject->
-		
-		// TODO
+		boxObject->WorldM = HMathHelper::Identity4x4();
+
+		auto boxMesh = m_mesh->drawArgs["Box"];
+		boxObject->cbIndex = 0;
+		boxObject->mesh = m_mesh.get();
+		boxObject->baseVertexLocation = boxMesh.baseVertexLocation;
+		boxObject->startIndexLocation = boxMesh.startIndexLocation;
+		boxObject->indexCount = boxMesh.indexCount;
+		m_renderableList.push_back(std::move(boxObject));
+
+		for (auto& e : m_renderableList)
+		{
+			m_opaqueRenderableList.push_back(e.get());
+		}
 	}
 
 	void Renderer::_createFrameResources()

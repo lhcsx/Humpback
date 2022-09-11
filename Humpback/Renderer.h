@@ -91,8 +91,7 @@ namespace Humpback
 		ComPtr<ID3D12GraphicsCommandList>	m_commandList = nullptr;
 		ComPtr<ID3D12Resource>				m_vertexBuffer = nullptr;
 
-		ComPtr<ID3DBlob>					m_vertexShader = nullptr;
-		ComPtr<ID3DBlob>					m_pixelShader = nullptr;
+		std::unordered_map<std::string, ComPtr<ID3DBlob>> m_shaders;
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
 
@@ -104,22 +103,25 @@ namespace Humpback
 		HANDLE								m_fenceEvent = 0;
 		DXGI_FORMAT							m_frameBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 		DXGI_FORMAT							m_dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		bool								m_4xMsaaState = false;
-		int									m_4xMsaaQuality = 0;
 
+		// Engine config.
 		unsigned int						m_width;
 		unsigned int						m_height;
-		unsigned int						m_frameIndex = 0;
-		HWND								m_hwnd;
 		float								m_aspectRatio;
 		float								m_near = 1.0f;
 		float								m_far = 1000.0f;
-		std::wstring						m_directory;
+		bool								m_4xMsaaState = false;
+		int									m_4xMsaaQuality = 0;
+
+		unsigned int						m_frameIndex = 0;
+		HWND								m_hwnd;
 		unsigned int						m_fenceValue = 0;
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
 		unsigned int						m_rtvDescriptorSize = 0;
 		POINT								m_lastMousePoint;
+		unsigned int						m_cbvSrvUavDescriptorSize = 0;
+		unsigned int						m_passCbvOffset = 0;
 		
 		float								m_theta = 1.5f * DirectX::XM_PI;
 		float								m_phi = DirectX::XM_PIDIV4;

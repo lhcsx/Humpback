@@ -13,8 +13,6 @@
 
 namespace Humpback
 {
-	class ID3D12Device;
-
 	struct ObjectConstants
 	{
 		DirectX::XMFLOAT4X4 WorldM = HMathHelper::Identity4x4();

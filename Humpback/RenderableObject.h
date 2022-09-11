@@ -31,6 +31,8 @@ namespace Humpback
 
 		D3D12_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+		unsigned int cbIndex = 0;
+
 		unsigned int indexCount = 0;
 		unsigned int startIndexLocation = 0;
 		unsigned int baseVertexLocation = 0;
