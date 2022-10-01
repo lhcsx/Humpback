@@ -23,6 +23,7 @@ namespace Humpback
 	{
 		DirectX::XMFLOAT4X4 ViewM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 ProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 ViewProjM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT3 CameraPosW = { .0f, .0f, .0f };
 		DirectX::XMFLOAT2 RenderTargetSize = { .0f, .0f };
 		float NearZ = .0f;

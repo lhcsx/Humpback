@@ -22,6 +22,8 @@ using namespace DirectX::Colors;
 
 namespace Humpback 
 {
+	extern const int FRAME_RESOURCE_COUNT = 3;
+
 	Renderer::Renderer(int width, int height, HWND hwnd) :
 		m_width(width), m_height(height), m_hwnd(hwnd), 
 		m_aspectRatio(static_cast<float>(m_width) / m_height), m_viewPort(0.f, 0.f, m_width, m_height),
@@ -45,22 +47,43 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
-		_createDescriptorHeaps();
-		_createConstantBufferViews();
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createBox();
 		_createRenderableObjects();
-		_createPso();
 		_createFrameResources();
+		_createDescriptorHeaps();
+		_createConstantBufferViews();
+		_createPso();
 
 		ThrowIfFailed(m_commandList->Close());
 		ID3D12CommandList* commandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
 
+		_waitForPreviousFrame();
 	}
 
 	void Renderer::_update()
+	{
+		_updateCamera();
+
+		m_curFrameResourceIdx = (m_curFrameResourceIdx + 1) % FRAME_RESOURCE_COUNT;
+		m_curFrameResource = m_frameResources[m_curFrameResourceIdx].get();
+
+		int curFrameFence = m_curFrameResource->fence;
+		if (curFrameFence != 0 && m_fence->GetCompletedValue() < curFrameFence)
+		{
+			// Wait until the GPU has completed the commands in the current frame resource
+			// before reusing it.
+			ThrowIfFailed(m_fence->SetEventOnCompletion(curFrameFence, 0));
+			WaitForSingleObject(m_fenceEvent, INFINITY);
+			CloseHandle(m_fenceEvent);
+		}
+
+		_updateCBuffers();
+	}
+
+	void Renderer::_updateCamera()
 	{
 		// Convert Spherical to Cartesian coordinates.
 		float x = m_radius * sinf(m_phi) * cosf(m_theta);
@@ -75,21 +98,55 @@ namespace Humpback
 
 		XMMATRIX view = XMMatrixLookAtLH(cameraPos, cameraTarget, cameraUp);
 		XMStoreFloat4x4(&m_viewMatrix, view);
-
-		XMMATRIX world = XMMatrixIdentity();
-		
-		XMMATRIX proj = XMLoadFloat4x4(&m_projectionMatrix);
-		
-		XMMATRIX mvp = world * view * proj;
-		
-		// Update the constant buffer with the latest mvp matrix.
-		ObjectConstants oc;
-		XMStoreFloat4x4(&oc.WorldM, XMMatrixTranspose(world));
-		//m_constantBuffer->CopyData(0, oc);
 	}
+
+	void Renderer::_updateCBuffers()
+	{
+		_updateCBufferPerObject();
+		_updateCBufferPerPass();
+	}
+
+	void Renderer::_updateCBufferPerObject()
+	{
+		auto curObjCBuffer = m_curFrameResource->objCBuffer.get();
+		for (auto& obj : m_renderableList)
+		{
+			if (obj->NumFramesDirty > 0)
+			{
+				XMMATRIX worldM = XMLoadFloat4x4(&(obj->WorldM));
+
+				ObjectConstants objConstants;
+				XMStoreFloat4x4(&(objConstants.WorldM), XMMatrixTranspose(worldM));
+
+				curObjCBuffer->CopyData(obj->cbIndex, objConstants);
+
+				obj->NumFramesDirty--;
+			}
+		}
+	}
+
+	void Renderer::_updateCBufferPerPass()
+	{
+		XMMATRIX viewM = XMLoadFloat4x4(&m_viewMatrix);
+		XMMATRIX projM = XMLoadFloat4x4(&m_projectionMatrix);
+
+		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
+
+		XMStoreFloat4x4(&m_cbufferPerPass.ViewM, XMMatrixTranspose(viewM));
+		XMStoreFloat4x4(&m_cbufferPerPass.ProjM, XMMatrixTranspose(projM));
+		XMStoreFloat4x4(&m_cbufferPerPass.ViewProjM, XMMatrixTranspose(viewProjM));
+		m_cbufferPerPass.NearZ = m_near;
+		m_cbufferPerPass.FarZ = m_far;
+		
+		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
+	}
+
+	int debugCounter = 0;
 
 	void Renderer::_render()
 	{
+		auto cmdAllocator = m_curFrameResource->cmdAlloc;
+
 		// Reuse the memory associated with command recording.
 		// We can only reset the associated command lists have finished execution on the GPU.
 		ThrowIfFailed(m_commandAllocator->Reset());
@@ -117,15 +174,12 @@ namespace Humpback
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
-		auto vbView = m_mesh->VertexBufferView();
-		auto idxView = m_mesh->IndexBufferView();
-		m_commandList->IASetVertexBuffers(0, 1, &vbView);
-		m_commandList->IASetIndexBuffer(&idxView);
-		m_commandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		int passCbvIndex = m_passCbvOffset + m_curFrameResourceIdx;;
+		auto passCbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+		passCbvHandle.Offset(passCbvIndex, m_cbvSrvUavDescriptorSize);
+		m_commandList->SetGraphicsRootDescriptorTable(1, passCbvHandle);
 
-		m_commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-
-		m_commandList->DrawIndexedInstanced(m_mesh->drawArgs["Box"].indexCount, 1, 0, 0, 0);
+		_renderRenderableObjects(m_commandList.Get(), m_opaqueRenderableList);
 
 		auto rt2PreBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -137,10 +191,49 @@ namespace Humpback
 		ID3D12CommandList* commands[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(commands), commands);
 
+		debugCounter++;
 		ThrowIfFailed(m_swapChain->Present(0, 0));
 		m_frameIndex = (m_frameIndex + 1) % FrameBufferCount;
 
-		_waitForPreviousFrame();
+		m_curFrameResource->fence = (++m_fenceValue);
+
+		m_commandQueue->Signal(m_fence.Get(), m_fenceValue);
+	}
+
+
+	void Renderer::_renderRenderableObjects(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderableObject*>& objList)
+	{
+		if (cmdList == nullptr)
+		{
+			ThrowInvalidParameterException();
+		}
+
+		auto objCB = m_curFrameResource->objCBuffer->Resource();
+
+		for (size_t i = 0; i < objList.size(); i++)
+		{
+			auto obj = objList[i];
+			if (obj == nullptr)
+			{
+				continue;
+			}
+
+			auto vbv = obj->mesh->VertexBufferView();
+			cmdList->IASetVertexBuffers(0, 1, &vbv);
+
+			auto ibv = obj->mesh->IndexBufferView();
+			cmdList->IASetIndexBuffer(&ibv);
+
+			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
+
+			unsigned int cbvIndex = m_curFrameResourceIdx * m_opaqueRenderableList.size() + obj->cbIndex;
+			auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+			cbvHandle.Offset(cbvIndex, m_cbvSrvUavDescriptorSize);
+
+			cmdList->SetGraphicsRootDescriptorTable(0, cbvHandle);
+
+			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
+		}
 	}
 
 	void Renderer::OnResize()
@@ -278,18 +371,16 @@ namespace Humpback
 
 	void Renderer::_waitForPreviousFrame()
 	{
-		const UINT64 fence = m_fenceValue;
-		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-		m_fenceValue += 1;
+		m_fenceValue++;
+
+		ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValue));
 
 		// Wati untile the previous frame is finished.
-		if (m_fence->GetCompletedValue() < fence)
+		if (m_fence->GetCompletedValue() < m_fenceValue)
 		{
-			ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+			ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITY);
 		}
-
-		//m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 
 	void Renderer::_createBox()
@@ -397,6 +488,7 @@ namespace Humpback
 
 		_createRtvAndDsvDescriptorHeaps();
 		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		m_cbvSrvUavDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 		ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 		
@@ -530,17 +622,19 @@ namespace Humpback
 
 	void Renderer::_createRootSignature()
 	{
-		// TODO
-
-		CD3DX12_ROOT_PARAMETER slotRootParameter[1];
+		CD3DX12_ROOT_PARAMETER slotRootParameter[2];
 
 		// Create a descriptor table of CBV.
-		CD3DX12_DESCRIPTOR_RANGE cbvTable;
-		cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		slotRootParameter[0].InitAsDescriptorTable(1, &cbvTable);
+		CD3DX12_DESCRIPTOR_RANGE cbvTable0;
+		cbvTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		slotRootParameter[0].InitAsDescriptorTable(1, &cbvTable0);
+
+		CD3DX12_DESCRIPTOR_RANGE cbvTable1;
+		cbvTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
+		slotRootParameter[1].InitAsDescriptorTable(1, &cbvTable1);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, slotRootParameter, 0, 
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameter, 0, 
 			nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 
@@ -586,23 +680,23 @@ namespace Humpback
 
 	void Renderer::_createPso()
 	{
-		// TODO
-
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+
 		psoDesc.InputLayout = { m_inputLayout.data(), (unsigned int)m_inputLayout.size() };
 		psoDesc.pRootSignature = m_rootSignature.Get();
 		psoDesc.VS =
 		{
-			reinterpret_cast<BYTE*>(m_vertexShader->GetBufferPointer()),
-			m_vertexShader->GetBufferSize()
+			reinterpret_cast<BYTE*>(m_shaders["standardVS"]->GetBufferPointer()),
+			m_shaders["standardVS"]->GetBufferSize()
 		};
 		psoDesc.PS =
 		{
-			reinterpret_cast<BYTE*>(m_pixelShader->GetBufferPointer()),
-			m_pixelShader->GetBufferSize()
+			reinterpret_cast<BYTE*>(m_shaders["opaquePS"]->GetBufferPointer()),
+			m_shaders["opaquePS"]->GetBufferSize()
 		};
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 		psoDesc.SampleMask = UINT_MAX;

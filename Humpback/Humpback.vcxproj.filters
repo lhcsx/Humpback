@@ -48,9 +48,6 @@
     <ClInclude Include="Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Renderable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HMathHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -72,6 +69,9 @@
     <ClInclude Include="UploadBufferHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HEngineConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Humpback.cpp">
@@ -81,9 +81,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D3DUtil.cpp">

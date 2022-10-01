@@ -20,7 +20,6 @@ using Microsoft::WRL::ComPtr;
 namespace Humpback 
 {
 
-	const int FRAME_RESOURCE_COUNT = 3;
 
 
 	class Renderer
@@ -66,8 +65,15 @@ namespace Humpback
 
 		void _updateTheViewport();
 
-		void _render();			// Render per frame.
 		void _update();			// Update per frame.
+		void _updateCamera();
+
+		void _render();			// Render per frame.
+		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);
+
+		void _updateCBuffers();
+		void _updateCBufferPerObject();
+		void _updateCBufferPerPass();
 
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
@@ -133,6 +139,7 @@ namespace Humpback
 		std::unique_ptr<Mesh>				m_mesh;
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
 		std::vector<RenderableObject*>		m_opaqueRenderableList;
+		PassConstants						m_cbufferPerPass;
 	};
 }
 

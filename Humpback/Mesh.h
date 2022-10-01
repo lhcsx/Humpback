@@ -5,8 +5,11 @@
 #pragma once
 
 
+#include <unordered_map>
 #include <wrl.h>
 #include <dxgi1_5.h>
+#include <d3dcompiler.h>
+#include <d3d12.h>
 
 
 namespace Humpback 

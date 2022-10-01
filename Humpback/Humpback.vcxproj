@@ -157,11 +157,11 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="HEngineConfig.h" />
     <ClInclude Include="HMathHelper.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="HumpbackHelper.h" />
     <ClInclude Include="Humpback.h" />
-    <ClInclude Include="Renderable.h" />
     <ClInclude Include="RenderableObject.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
@@ -176,7 +176,6 @@
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="HMathHelper.cpp" />
     <ClCompile Include="Humpback.cpp" />
-    <ClCompile Include="Renderable.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Timer.cpp" />
   </ItemGroup>

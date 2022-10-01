@@ -47,6 +47,16 @@ namespace Humpback
 		}
 	}
 
+	inline void ThrowRuntimeException(const std::string& str)
+	{
+		throw std::runtime_error(str);
+	}
+
+	inline void ThrowInvalidParameterException()
+	{
+		throw std::runtime_error("Invalid input parameter.");
+	}
+
 	void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter)
 	{
 		*ppAdapter = nullptr;
