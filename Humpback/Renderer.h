@@ -54,7 +54,7 @@ namespace Humpback
 		void _cleanUp();
 		void _waitForPreviousFrame();
 
-		void _createBox();
+		void _createSceneGeometry();
 		void _createDescriptorHeaps();
 		void _createConstantBufferViews();
 		void _createRootSignature();
@@ -93,7 +93,8 @@ namespace Humpback
 		ComPtr<ID3D12Resource>				m_depthStencilBuffer = nullptr;
 		ComPtr<ID3D12CommandAllocator>		m_commandAllocator = nullptr;
 		ComPtr<ID3D12RootSignature>			m_rootSignature = nullptr;
-		ComPtr<ID3D12PipelineState>			m_pipelineState = nullptr;
+		std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> m_psos;
+
 		ComPtr<ID3D12GraphicsCommandList>	m_commandList = nullptr;
 		ComPtr<ID3D12Resource>				m_vertexBuffer = nullptr;
 
@@ -136,10 +137,9 @@ namespace Humpback
 		DirectX::XMFLOAT4X4					m_viewMatrix;
 		DirectX::XMFLOAT4X4					m_projectionMatrix;
 		
-		std::unique_ptr<Mesh>				m_mesh;
+		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
 		std::vector<RenderableObject*>		m_opaqueRenderableList;
 		PassConstants						m_cbufferPerPass;
 	};
 }
-

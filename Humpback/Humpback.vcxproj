@@ -157,6 +157,7 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="GeometryGenetator.h" />
     <ClInclude Include="HEngineConfig.h" />
     <ClInclude Include="HMathHelper.h" />
     <ClInclude Include="Mesh.h" />
@@ -174,6 +175,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D3DUtil.cpp" />
     <ClCompile Include="FrameResource.cpp" />
+    <ClCompile Include="GeometryGenetator.cpp" />
     <ClCompile Include="HMathHelper.cpp" />
     <ClCompile Include="Humpback.cpp" />
     <ClCompile Include="Renderer.cpp" />
