@@ -22,12 +22,19 @@ namespace Humpback
 	struct PassConstants
 	{
 		DirectX::XMFLOAT4X4 ViewM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 InvViewM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 ProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 InvProjM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 ViewProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 InvViewProjM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT3 CameraPosW = { .0f, .0f, .0f };
+		float cbPerObjectPad1 = 0.0f;
 		DirectX::XMFLOAT2 RenderTargetSize = { .0f, .0f };
+		DirectX::XMFLOAT2 InvRenderTargetSize = { .0f, .0f };
 		float NearZ = .0f;
 		float FarZ = .0f;
+		float TotalTime = 0.0f;
+		float DeltaTime = 0.0f;
 	};
 
 
