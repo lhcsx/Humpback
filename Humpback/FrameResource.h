@@ -9,6 +9,7 @@
 
 #include "HMathHelper.h"
 #include "UploadBufferHelper.h"
+#include "Vertex.h"
 
 
 namespace Humpback
@@ -52,6 +53,8 @@ namespace Humpback
 
 		std::unique_ptr<UploadBuffer<ObjectConstants>> objCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<PassConstants>> passCBuffer = nullptr;
+
+		std::unique_ptr<UploadBuffer<Vertex>> wavesVB = nullptr;
 
 		unsigned int fence = 0;
 	};

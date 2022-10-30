@@ -55,8 +55,6 @@ namespace Humpback
 		void _waitForPreviousFrame();
 
 		void _createSceneGeometry();
-		void _createDescriptorHeaps();
-		void _createConstantBufferViews();
 		void _createRootSignature();
 		void _createShadersAndInputLayout();
 		void _createPso();
@@ -88,7 +86,6 @@ namespace Humpback
 		ComPtr<ID3D12DescriptorHeap>		m_rtvHeap = nullptr;
 		ComPtr<ID3D12DescriptorHeap>		m_dsvHeap = nullptr;
 		ComPtr<ID3D12DescriptorHeap>		m_srvHeap = nullptr;
-		ComPtr<ID3D12DescriptorHeap>		m_cbvHeap = nullptr;
 		ComPtr<ID3D12Resource>				m_frameBuffers[Renderer::FrameBufferCount];
 		ComPtr<ID3D12Resource>				m_depthStencilBuffer = nullptr;
 		ComPtr<ID3D12CommandAllocator>		m_commandAllocator = nullptr;

@@ -48,13 +48,14 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
+		// TODO
+		// Initialize waves.
+
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createSceneGeometry();
 		_createRenderableObjects();
 		_createFrameResources();
-		_createDescriptorHeaps();
-		_createConstantBufferViews();
 		_createPso();
 
 		ThrowIfFailed(m_commandList->Close());
@@ -170,15 +171,16 @@ namespace Humpback
 		auto dsView = _getCurrentDSBufferView();
 		m_commandList->OMSetRenderTargets(1, &backbufferView, true, &dsView);
 
-		ID3D12DescriptorHeap* descHeaps[] = { m_cbvHeap.Get() };
-		m_commandList->SetDescriptorHeaps(_countof(descHeaps), descHeaps);
+		//ID3D12DescriptorHeap* descHeaps[] = { m_cbvHeap.Get() };
+		//m_commandList->SetDescriptorHeaps(_countof(descHeaps), descHeaps);
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
 		int passCbvIndex = m_passCbvOffset + m_curFrameResourceIdx;;
-		auto passCbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-		passCbvHandle.Offset(passCbvIndex, m_cbvSrvUavDescriptorSize);
-		m_commandList->SetGraphicsRootDescriptorTable(1, passCbvHandle);
+
+		// Bind per-pass constant buffer.
+		auto passCB = m_curFrameResource->passCBuffer->Resource();
+		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
 		_renderRenderableObjects(m_commandList.Get(), m_opaqueRenderableList);
 
@@ -210,6 +212,7 @@ namespace Humpback
 		}
 
 		auto objCB = m_curFrameResource->objCBuffer->Resource();
+		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
 
 		for (size_t i = 0; i < objList.size(); i++)
 		{
@@ -227,11 +230,11 @@ namespace Humpback
 
 			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
 
-			unsigned int cbvIndex = m_curFrameResourceIdx * m_opaqueRenderableList.size() + obj->cbIndex;
-			auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-			cbvHandle.Offset(cbvIndex, m_cbvSrvUavDescriptorSize);
+			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+			objCBAddress += obj->cbIndex * objCBByteSize;
 
-			cmdList->SetGraphicsRootDescriptorTable(0, cbvHandle);
+			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+
 
 			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
@@ -592,85 +595,14 @@ namespace Humpback
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&dsvDesc, IID_PPV_ARGS(&m_dsvHeap)));
 	}
 
-	void Renderer::_createDescriptorHeaps()
-	{
-		unsigned int objCount = m_opaqueRenderableList.size();
-
-		unsigned int descriptorsCount = (objCount + 1) * FRAME_RESOURCE_COUNT;
-		
-		m_passCbvOffset = objCount * FRAME_RESOURCE_COUNT;
-
-		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
-		cbvHeapDesc.NumDescriptors = descriptorsCount;
-		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		cbvHeapDesc.NodeMask = 0;
-
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_cbvHeap)));
-	}
-
-	void Renderer::_createConstantBufferViews()
-	{
-		unsigned int objCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
-
-		unsigned int objCount = m_opaqueRenderableList.size();
-
-		// Create constant buffer view for each renderable object.
-		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
-		{
-			auto objectCB = m_frameResources[i]->objCBuffer->Resource();
-			for (size_t j = 0; j < objCount; j++)
-			{
-				D3D12_GPU_VIRTUAL_ADDRESS cbAddress = objectCB->GetGPUVirtualAddress();
-
-				cbAddress += j * objCBufferSize;	// Offset to the constant buffer of target object.
-				
-				int heapIndex = i * objCount + j;
-				auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-				handle.Offset(heapIndex, m_cbvSrvUavDescriptorSize);
-
-				D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-				cbvDesc.BufferLocation = cbAddress;
-				cbvDesc.SizeInBytes = objCBufferSize;
-
-				m_device->CreateConstantBufferView(&cbvDesc, handle);
-			}
-		}
-
-		// Create constant buffert view for each pass.
-		unsigned int passCBufferSize = D3DUtil::CalConstantBufferByteSize(sizeof(PassConstants));
-
-		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
-		{
-			auto passCB = m_frameResources[i]->passCBuffer->Resource();
-
-			D3D12_GPU_VIRTUAL_ADDRESS cbAddress = passCB->GetGPUVirtualAddress();
-
-			// NOTE
-			int heapIndex = m_passCbvOffset + i;
-			auto handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetCPUDescriptorHandleForHeapStart());
-			handle.Offset(heapIndex, m_cbvSrvUavDescriptorSize);
-
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
-			cbvDesc.BufferLocation = cbAddress;
-			cbvDesc.SizeInBytes = passCBufferSize;
-
-			m_device->CreateConstantBufferView(&cbvDesc, handle);
-		}
-	}
-
 	void Renderer::_createRootSignature()
 	{
 		CD3DX12_ROOT_PARAMETER slotRootParameter[2];
 
-		// Create a descriptor table of CBV.
-		CD3DX12_DESCRIPTOR_RANGE cbvTable0;
-		cbvTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		slotRootParameter[0].InitAsDescriptorTable(1, &cbvTable0);
+		// Create root CBVs
+		slotRootParameter[0].InitAsConstantBufferView(0);
+		slotRootParameter[1].InitAsConstantBufferView(1);
 
-		CD3DX12_DESCRIPTOR_RANGE cbvTable1;
-		cbvTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1);
-		slotRootParameter[1].InitAsDescriptorTable(1, &cbvTable1);
 
 		// A root signature is an array of root parameters.
 		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameter, 0, 
