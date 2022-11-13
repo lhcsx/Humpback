@@ -12,6 +12,7 @@
 #include "UploadBufferHelper.h"
 #include "HMathHelper.h"
 #include "RenderableObject.h"
+#include "Waves.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -19,7 +20,6 @@ using Microsoft::WRL::ComPtr;
 
 namespace Humpback 
 {
-
 
 
 	class Renderer
@@ -55,6 +55,7 @@ namespace Humpback
 		void _waitForPreviousFrame();
 
 		void _createSceneGeometry();
+		void _createWavesBuffers();
 		void _createRootSignature();
 		void _createShadersAndInputLayout();
 		void _createPso();
@@ -72,6 +73,8 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
+
+		void _updateWaves();
 
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
@@ -138,5 +141,10 @@ namespace Humpback
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
 		std::vector<RenderableObject*>		m_opaqueRenderableList;
 		PassConstants						m_cbufferPerPass;
+
+
+		// Scene
+		std::unique_ptr<Waves> m_waves;
+		RenderableObject* m_waveObj = nullptr;
 	};
 }

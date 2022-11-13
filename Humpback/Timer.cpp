@@ -24,27 +24,56 @@ namespace Humpback {
 		return (float)m_deltaTime;
 	}
 
+	float Timer::TotalTime() const
+	{
+		if (m_stopped)
+		{
+			return (float)(((m_stopTime - m_pausedTime) - m_baseTime) * m_secondsPerCount);
+		}
+		else
+		{
+			return (float)(((m_currentTime - m_pausedTime) - m_baseTime)* m_secondsPerCount);
+		}
+	}
+
 	void Timer::Reset()
 	{
 		__int64 currentTime = 0;
 		QueryPerformanceCounter((LARGE_INTEGER*)&currentTime);
-		m_currentTime = currentTime;
-		m_baseTime = 
-		m_prevTime = 0;
-		m_pausedTime = 0;
 
+		m_currentTime = currentTime;
+		m_baseTime = currentTime;
+		m_prevTime = currentTime;
+		m_stopTime = 0;
+		m_pausedTime = 0;
 
 		m_stopped = false;
 	}
 
 	void Timer::Start()
 	{
-		m_stopped = false;
+		if (m_stopped)
+		{
+			__int64 startTime;
+			QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+
+			m_pausedTime += (startTime - m_stopTime);
+			m_prevTime = startTime;
+			m_stopTime = 0;
+			m_stopped = false;
+		}
 	}
 
 	void Timer::Stop()
 	{
-		m_stopped = true;
+		if (m_stopped == false)
+		{
+			__int64 currTime;
+			QueryPerformanceCounter((LARGE_INTEGER*)&currTime);
+			
+			m_stopTime = currTime;
+			m_stopped = true;
+		}
 	}
 
 	void Timer::Tick()

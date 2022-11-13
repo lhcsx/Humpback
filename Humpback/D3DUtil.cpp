@@ -35,12 +35,12 @@ namespace Humpback
 
 		// Inorder to copy cpu memory data into our default buffer, 
 		// we need to create a intermdiate upload heap.
-		auto tempUploadProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		auto tempUploadBuffer = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
+		auto uploadBufferProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
 		ThrowIfFailed(device->CreateCommittedResource(
-			&tempUploadProperties,
+			&uploadBufferProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&tempUploadBuffer,
+			&uploadBufferDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(uploadBuffer.GetAddressOf())));

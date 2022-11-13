@@ -78,6 +78,11 @@ namespace Humpback
 		MeshData CreateGrid(float width, float depth, uint32 m, uint32 n);
 		MeshData CreateQuad(float x, float y, float w, float h, float depth);
 
+		float GetHillsHeight(float x, float z) const
+		{
+			return 0.3f * (z * sinf(0.1f * x) + x * cosf(.1f * z));
+		}
+
 	private:
 		void _subdivide(MeshData& meshData);
 		Vertex _midPoint(const Vertex& v0, const Vertex& v1);

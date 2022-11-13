@@ -13,6 +13,7 @@ namespace Humpback {
 		Timer();
 
 		float DeltaTime() const;	// in seconds
+		float TotalTime() const;
 		
 		void Reset();
 		void Start();
@@ -22,13 +23,14 @@ namespace Humpback {
 	private:
 
 		double m_secondsPerCount;
+		double m_deltaTime;
 
 		__int64 m_baseTime;
 		__int64 m_pausedTime;
+		__int64 m_stopTime;
 		__int64 m_currentTime;
 		__int64 m_prevTime;
 
-		double m_deltaTime;
 
 		bool m_stopped = false;
 

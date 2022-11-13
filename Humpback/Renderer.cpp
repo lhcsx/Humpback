@@ -48,12 +48,10 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
-		// TODO
-		// Initialize waves.
-
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createSceneGeometry();
+		_createWavesBuffers();
 		_createRenderableObjects();
 		_createFrameResources();
 		_createPso();
@@ -64,6 +62,7 @@ namespace Humpback
 
 		_waitForPreviousFrame();
 	}
+
 
 	void Renderer::_update()
 	{
@@ -83,6 +82,11 @@ namespace Humpback
 		}
 
 		_updateCBuffers();
+		
+		// todo 
+		// update main passCB
+
+		_updateWaves();
 	}
 
 	void Renderer::_updateCamera()
@@ -141,6 +145,40 @@ namespace Humpback
 		m_cbufferPerPass.FarZ = m_far;
 		
 		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
+	}
+
+	void Renderer::_updateWaves()
+	{
+		static float tBase = .0f;
+
+		if (m_timer->TotalTime() - tBase >= 0.25f)
+		{
+			tBase += 0.25f;
+
+			int i = HMathHelper::Rand(4, m_waves->RowCount() - 5);
+			int j = HMathHelper::Rand(4, m_waves->ColumnCount() - 5);
+
+			float r = HMathHelper::RandF(0.2f, 0.5f);
+
+			m_waves->Disturb(i, j, r);
+		}
+
+		m_waves->Update(m_timer->DeltaTime());
+
+		// Update the wave vertex buffer with the new solution.
+		auto currWavesVB = m_curFrameResource->wavesVB.get();
+		for (size_t i = 0; i < m_waves->VertexCount(); i++)
+		{
+			Vertex v;
+
+			v.Position = m_waves->Position(i);
+			v.Color = XMFLOAT4(DirectX::Colors::DarkBlue);
+
+			currWavesVB->CopyData(i, v);
+		}
+
+		// Set the dynamic VB of the wave renderable object to the current frame VB.
+		m_waveObj->mesh->VertexBufferGPU = currWavesVB->Resource();
 	}
 
 	int debugCounter = 0;
@@ -389,113 +427,133 @@ namespace Humpback
 
 	void Renderer::_createSceneGeometry()
 	{
+		m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+
 		GeometryGenerator geoGen;
-		GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
-		GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
-		GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
-		GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
+		GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
 
-
-		// Merge the mesh.
-
-		// Calculate the starting vertex index of each mesh.
-		unsigned int boxVertexOffset = 0;
-		unsigned int gridVertexOffset = (unsigned int)box.vertices.size();
-		unsigned int sphereVertexOffset = gridVertexOffset + (unsigned int)grid.vertices.size();
-		unsigned int cylinderVertexOffset = sphereVertexOffset + (unsigned int)sphere.vertices.size();
-
-		// Calculate the starting index of each mesh.
-		unsigned int boxIndexOffset = 0;
-		unsigned int gridIndexOffset = (unsigned int)box.indices32.size();
-		unsigned int sphereIndexOffset = gridIndexOffset + (unsigned int)grid.indices32.size();
-		unsigned int cylinderIndexOffset = sphereIndexOffset + (unsigned int)sphere.indices32.size();
-
-		SubMesh boxSubmesh;
-		boxSubmesh.indexCount = (unsigned int)box.indices32.size();
-		boxSubmesh.startIndexLocation = boxIndexOffset;
-		boxSubmesh.baseVertexLocation = boxVertexOffset;
-
-		SubMesh gridSubmesh;
-		gridSubmesh.indexCount = (unsigned int)grid.indices32.size();
-		gridSubmesh.startIndexLocation = gridIndexOffset;
-		gridSubmesh.baseVertexLocation = gridVertexOffset;
-
-		SubMesh sphereSubmesh;
-		sphereSubmesh.indexCount = (unsigned int)sphere.indices32.size();
-		sphereSubmesh.startIndexLocation = sphereIndexOffset;
-		sphereSubmesh.baseVertexLocation = sphereVertexOffset;
-
-		SubMesh cylinderSubmesh;
-		cylinderSubmesh.indexCount = (unsigned int)cylinder.indices32.size();
-		cylinderSubmesh.startIndexLocation = cylinderIndexOffset;
-		cylinderSubmesh.baseVertexLocation = cylinderVertexOffset;
-
-		unsigned int totalVertexCount =
-			box.vertices.size() + grid.vertices.size()
-			+ sphere.vertices.size() + cylinder.vertices.size();
-
-		std::vector<Vertex> vertices(totalVertexCount);
-
-		unsigned int k = 0;
-		for (size_t i = 0; i < box.vertices.size(); i++, k++)
+		std::vector<Vertex> vertices(grid.vertices.size());
+		for (size_t i = 0; i < grid.vertices.size(); i++)
 		{
-			vertices[k].Position = box.vertices[i].Position;
-			vertices[k].Color = XMFLOAT4(DirectX::Colors::DarkGreen);
+			auto& p = grid.vertices[i].Position;
+			vertices[i].Position = p;
+			vertices[i].Position.y = geoGen.GetHillsHeight(p.x, p.z);
+
+			// Color the vertex based on its height.
+			if (vertices[i].Position.y < -10.0f)
+			{
+				// Sandy beach color.
+				vertices[i].Color = XMFLOAT4(1.0f, 0.96f, 0.62f, 1.0f);
+			}
+			else if (vertices[i].Position.y < 5.0f)
+			{
+				// Light yellow-green.
+				vertices[i].Color = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
+			}
+			else if (vertices[i].Position.y < 12.0f)
+			{
+				// Dark yellow-green.
+				vertices[i].Color = XMFLOAT4(0.1f, 0.48f, 0.19f, 1.0f);
+			}
+			else if (vertices[i].Position.y < 20.0f)
+			{
+				// Dark brown.
+				vertices[i].Color = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.0f);
+			}
+			else
+			{
+				// White snow.
+				vertices[i].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			}
 		}
 
-		for (size_t i = 0; i < grid.vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = grid.vertices[i].Position;
-			vertices[k].Color = XMFLOAT4(DirectX::Colors::ForestGreen);
-		}
+		
+		std::vector<std::uint16_t> indices = grid.GetIndices16();
+		
+		const unsigned int vbByteSize = vertices.size() * sizeof(Vertex);
+		const unsigned int ibByteSize = indices.size() * sizeof(std::uint16_t);
 
-		for (size_t i = 0; i < sphere.vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = sphere.vertices[i].Position;
-			vertices[k].Color = XMFLOAT4(DirectX::Colors::Crimson);
-		}
-
-		for (size_t i = 0; i < cylinder.vertices.size(); ++i, ++k)
-		{
-			vertices[k].Position = cylinder.vertices[i].Position;
-			vertices[k].Color = XMFLOAT4(DirectX::Colors::SteelBlue);
-		}
-
-		std::vector<std::uint16_t> indices;
-		indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
-		indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
-		indices.insert(indices.end(), std::begin(sphere.GetIndices16()), std::end(sphere.GetIndices16()));
-		indices.insert(indices.end(), std::begin(cylinder.GetIndices16()), std::end(cylinder.GetIndices16()));
-
-		const unsigned int vbByteSize = (unsigned int)vertices.size() * sizeof(Vertex);
-		const unsigned int ibByteSize = (unsigned int)indices.size() * sizeof(std::uint16_t);
-
-		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>();
-		mesh->Name = "shapeGeo";
-
+		auto mesh = std::make_unique<Mesh>();
+		mesh->Name = "land";
+		
 		ThrowIfFailed(D3DCreateBlob(vbByteSize, &mesh->VertexBufferCPU));
 		CopyMemory(mesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
 
 		ThrowIfFailed(D3DCreateBlob(ibByteSize, &mesh->IndexBufferCPU));
 		CopyMemory(mesh->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
 
-		mesh->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(),
-			m_commandList.Get(), vertices.data(), vbByteSize, mesh->VertexBufferUploader);
+		mesh->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			vertices.data(), vbByteSize, mesh->VertexBufferUploader);
 
-		mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(),
-			m_commandList.Get(), indices.data(), ibByteSize, mesh->IndexBufferUploader);
+		mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			indices.data(), ibByteSize, mesh->IndexBufferUploader);
 
 		mesh->vertexByteStride = sizeof(Vertex);
 		mesh->vertexBufferByteSize = vbByteSize;
 		mesh->indexFormat = DXGI_FORMAT_R16_UINT;
 		mesh->indexBufferByteSize = ibByteSize;
 
-		mesh->drawArgs["box"] = boxSubmesh;
-		mesh->drawArgs["grid"] = gridSubmesh;
-		mesh->drawArgs["sphere"] = sphereSubmesh;
-		mesh->drawArgs["cylinder"] = cylinderSubmesh;
+		SubMesh subMesh;
+		subMesh.baseVertexLocation = 0;
+		subMesh.indexCount = indices.size();
+		subMesh.startIndexLocation = 0;
 
-		m_meshes[mesh->Name] = std::move(mesh);
+		mesh->drawArgs["grid"] = subMesh;
+
+		m_meshes["land"] = std::move(mesh);
+	}
+
+	void Renderer::_createWavesBuffers()
+	{
+		std::vector<std::uint16_t> indices(3 * m_waves->TriangleCount());
+
+		int m = m_waves->RowCount();
+		int n = m_waves->ColumnCount();
+		int k = 0;
+		for (size_t i = 0; i < m - 1; i++)
+		{
+			for (size_t j = 0; j < n - 1; j++)
+			{
+				indices[k] = i * n + j;
+				indices[k + 1] = i * n + j + 1;
+				indices[k + 2] = (i + 1) * n + j;
+
+				indices[k + 3] = (i + 1) * n + j;
+				indices[k + 4] = i * n + j + 1;
+				indices[k + 5] = (i + 1) * n + j + 1;
+
+				k += 6; // next quad
+			}
+		}
+		
+		unsigned int vbByteSize = m_waves->VertexCount() * sizeof(Vertex);
+		unsigned int ibByteSize = (unsigned int)indices.size() * sizeof(std::uint16_t);
+		
+		auto mesh = std::make_unique<Mesh>();
+		mesh->Name = "wateGeo";
+
+		// set dynamically.
+		mesh->VertexBufferCPU = nullptr;
+		mesh->VertexBufferGPU = nullptr;
+
+		ThrowIfFailed(D3DCreateBlob(ibByteSize, &mesh->IndexBufferCPU));
+		CopyMemory(mesh->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+		mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			indices.data(), ibByteSize, mesh->IndexBufferUploader);
+
+		mesh->vertexByteStride = sizeof(Vertex);
+		mesh->vertexBufferByteSize = vbByteSize;
+		mesh->indexFormat = DXGI_FORMAT_R16_UINT;
+		mesh->indexBufferByteSize = ibByteSize;
+
+		SubMesh sm;
+		sm.indexCount = indices.size();
+		sm.baseVertexLocation = 0;
+		sm.startIndexLocation = 0;
+		
+		mesh->drawArgs["grid"] = sm;
+		m_meshes["wateGeo"] = std::move(mesh);
 	}
 
 	void Renderer::_initD3D12()
@@ -694,81 +752,83 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		auto boxRitem = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&boxRitem->WorldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-		boxRitem->cbIndex = 0;
-		boxRitem->mesh = m_meshes["shapeGeo"].get();
-		boxRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		boxRitem->indexCount = boxRitem->mesh->drawArgs["box"].indexCount;
-		boxRitem->startIndexLocation = boxRitem->mesh->drawArgs["box"].startIndexLocation;
-		boxRitem->baseVertexLocation = boxRitem->mesh->drawArgs["box"].baseVertexLocation;
-		m_renderableList.push_back(std::move(boxRitem));
+		// TODO
 
-		auto gridRitem = std::make_unique<RenderableObject>();
-		gridRitem->WorldM = HMathHelper::Identity4x4();
-		gridRitem->cbIndex = 1;
-		gridRitem->mesh = m_meshes["shapeGeo"].get();
-		gridRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
-		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
-		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		m_renderableList.push_back(std::move(gridRitem));
+		//auto boxRitem = std::make_unique<RenderableObject>();
+		//XMStoreFloat4x4(&boxRitem->WorldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
+		//boxRitem->cbIndex = 0;
+		//boxRitem->mesh = m_meshes["shapeGeo"].get();
+		//boxRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//boxRitem->indexCount = boxRitem->mesh->drawArgs["box"].indexCount;
+		//boxRitem->startIndexLocation = boxRitem->mesh->drawArgs["box"].startIndexLocation;
+		//boxRitem->baseVertexLocation = boxRitem->mesh->drawArgs["box"].baseVertexLocation;
+		//m_renderableList.push_back(std::move(boxRitem));
 
-		UINT objCBIndex = 2;
-		for (int i = 0; i < 5; ++i)
-		{
-			auto leftCylRitem = std::make_unique<RenderableObject>();
-			auto rightCylRitem = std::make_unique<RenderableObject>();
-			auto leftSphereRitem = std::make_unique<RenderableObject>();
-			auto rightSphereRitem = std::make_unique<RenderableObject>();
+		//auto gridRitem = std::make_unique<RenderableObject>();
+		//gridRitem->WorldM = HMathHelper::Identity4x4();
+		//gridRitem->cbIndex = 1;
+		//gridRitem->mesh = m_meshes["shapeGeo"].get();
+		//gridRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
+		//gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
+		//gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
+		//m_renderableList.push_back(std::move(gridRitem));
 
-			XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
-			XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+		//UINT objCBIndex = 2;
+		//for (int i = 0; i < 5; ++i)
+		//{
+		//	auto leftCylRitem = std::make_unique<RenderableObject>();
+		//	auto rightCylRitem = std::make_unique<RenderableObject>();
+		//	auto leftSphereRitem = std::make_unique<RenderableObject>();
+		//	auto rightSphereRitem = std::make_unique<RenderableObject>();
 
-			XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
-			XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
+		//	XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
+		//	XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
 
-			XMStoreFloat4x4(&leftCylRitem->WorldM, rightCylWorld);
-			leftCylRitem->cbIndex = objCBIndex++;
-			leftCylRitem->mesh = m_meshes["shapeGeo"].get();
-			leftCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			leftCylRitem->indexCount = leftCylRitem->mesh->drawArgs["cylinder"].indexCount;
-			leftCylRitem->startIndexLocation = leftCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-			leftCylRitem->baseVertexLocation = leftCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
+		//	XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
+		//	XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
 
-			XMStoreFloat4x4(&rightCylRitem->WorldM, leftCylWorld);
-			rightCylRitem->cbIndex = objCBIndex++;
-			rightCylRitem->mesh = m_meshes["shapeGeo"].get();
-			rightCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			rightCylRitem->indexCount = rightCylRitem->mesh->drawArgs["cylinder"].indexCount;
-			rightCylRitem->startIndexLocation = rightCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-			rightCylRitem->baseVertexLocation = rightCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
+		//	XMStoreFloat4x4(&leftCylRitem->WorldM, rightCylWorld);
+		//	leftCylRitem->cbIndex = objCBIndex++;
+		//	leftCylRitem->mesh = m_meshes["shapeGeo"].get();
+		//	leftCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//	leftCylRitem->indexCount = leftCylRitem->mesh->drawArgs["cylinder"].indexCount;
+		//	leftCylRitem->startIndexLocation = leftCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
+		//	leftCylRitem->baseVertexLocation = leftCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
 
-			XMStoreFloat4x4(&leftSphereRitem->WorldM, leftSphereWorld);
-			leftSphereRitem->cbIndex = objCBIndex++;
-			leftSphereRitem->mesh = m_meshes["shapeGeo"].get();
-			leftSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			leftSphereRitem->indexCount = leftSphereRitem->mesh->drawArgs["sphere"].indexCount;
-			leftSphereRitem->startIndexLocation = leftSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-			leftSphereRitem->baseVertexLocation = leftSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
+		//	XMStoreFloat4x4(&rightCylRitem->WorldM, leftCylWorld);
+		//	rightCylRitem->cbIndex = objCBIndex++;
+		//	rightCylRitem->mesh = m_meshes["shapeGeo"].get();
+		//	rightCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//	rightCylRitem->indexCount = rightCylRitem->mesh->drawArgs["cylinder"].indexCount;
+		//	rightCylRitem->startIndexLocation = rightCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
+		//	rightCylRitem->baseVertexLocation = rightCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
 
-			XMStoreFloat4x4(&rightSphereRitem->WorldM, rightSphereWorld);
-			rightSphereRitem->cbIndex = objCBIndex++;
-			rightSphereRitem->mesh = m_meshes["shapeGeo"].get();
-			rightSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			rightSphereRitem->indexCount = rightSphereRitem->mesh->drawArgs["sphere"].indexCount;
-			rightSphereRitem->startIndexLocation = rightSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-			rightSphereRitem->baseVertexLocation = rightSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
+		//	XMStoreFloat4x4(&leftSphereRitem->WorldM, leftSphereWorld);
+		//	leftSphereRitem->cbIndex = objCBIndex++;
+		//	leftSphereRitem->mesh = m_meshes["shapeGeo"].get();
+		//	leftSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//	leftSphereRitem->indexCount = leftSphereRitem->mesh->drawArgs["sphere"].indexCount;
+		//	leftSphereRitem->startIndexLocation = leftSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
+		//	leftSphereRitem->baseVertexLocation = leftSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
 
-			m_renderableList.push_back(std::move(leftCylRitem));
-			m_renderableList.push_back(std::move(rightCylRitem));
-			m_renderableList.push_back(std::move(leftSphereRitem));
-			m_renderableList.push_back(std::move(rightSphereRitem));
-		}
+		//	XMStoreFloat4x4(&rightSphereRitem->WorldM, rightSphereWorld);
+		//	rightSphereRitem->cbIndex = objCBIndex++;
+		//	rightSphereRitem->mesh = m_meshes["shapeGeo"].get();
+		//	rightSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		//	rightSphereRitem->indexCount = rightSphereRitem->mesh->drawArgs["sphere"].indexCount;
+		//	rightSphereRitem->startIndexLocation = rightSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
+		//	rightSphereRitem->baseVertexLocation = rightSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
 
-		// All the render items are opaque.
-		for (auto& e : m_renderableList)
-			m_opaqueRenderableList.push_back(e.get());
+		//	m_renderableList.push_back(std::move(leftCylRitem));
+		//	m_renderableList.push_back(std::move(rightCylRitem));
+		//	m_renderableList.push_back(std::move(leftSphereRitem));
+		//	m_renderableList.push_back(std::move(rightSphereRitem));
+		//}
+
+		//// All the render items are opaque.
+		//for (auto& e : m_renderableList)
+		//	m_opaqueRenderableList.push_back(e.get());
 	}
 
 	void Renderer::_createFrameResources()

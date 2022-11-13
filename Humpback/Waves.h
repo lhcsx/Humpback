@@ -20,6 +20,7 @@ namespace Humpback
 
 		int RowCount() const;
 		int ColumnCount() const;
+		int VertexCount() const;
 		int TriangleCount() const;
 		float Width() const;
 		float Depth() const;
@@ -38,9 +39,9 @@ namespace Humpback
 		int m_vertexCount = 0;
 		int m_triangleCount = 0;
 
-		float mK1 = .0f;
-		float mK2 = .0f;
-		float mK3 = .0f;
+		float m_k1 = .0f;
+		float m_k2 = .0f;
+		float m_k3 = .0f;
 
 		float m_timeStep = .0f;
 		float m_spatialStep = .0f;
