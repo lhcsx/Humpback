@@ -10,7 +10,7 @@
 namespace Humpback
 {
 
-	FrameResource::FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount)
+	FrameResource::FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, unsigned int waveVertCount)
 	{
 		if (device == nullptr)
 		{
@@ -23,6 +23,8 @@ namespace Humpback
 
 		objCBuffer = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
 		passCBuffer = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
+
+		wavesVB = std::make_unique<UploadBuffer<Vertex>>(device, waveVertCount, false);
 	}
 
 	FrameResource::~FrameResource()

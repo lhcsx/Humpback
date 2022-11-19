@@ -41,6 +41,7 @@ namespace Humpback
 	void Renderer::Initialize()
 	{
 		m_timer = std::make_unique<Timer>();
+		m_timer->Reset();
 
 		_initD3D12();
 
@@ -83,9 +84,6 @@ namespace Humpback
 
 		_updateCBuffers();
 		
-		// todo 
-		// update main passCB
-
 		_updateWaves();
 	}
 
@@ -151,7 +149,8 @@ namespace Humpback
 	{
 		static float tBase = .0f;
 
-		if (m_timer->TotalTime() - tBase >= 0.25f)
+		int totaltime = m_timer->TotalTime();
+		if (totaltime - tBase >= 0.25f)
 		{
 			tBase += 0.25f;
 
@@ -181,8 +180,6 @@ namespace Humpback
 		m_waveObj->mesh->VertexBufferGPU = currWavesVB->Resource();
 	}
 
-	int debugCounter = 0;
-
 	void Renderer::_render()
 	{
 		auto cmdAllocator = m_curFrameResource->cmdAlloc;
@@ -197,7 +194,7 @@ namespace Humpback
 		m_commandList->RSSetViewports(1, &m_viewPort);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		auto transP2R = CD3DX12_RESOURCE_BARRIER::Transition(m_frameBuffers[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		auto transP2R = CD3DX12_RESOURCE_BARRIER::Transition(_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		m_commandList->ResourceBarrier(1, &transP2R);
 
 		// Clear depth and color buffers.
@@ -209,9 +206,6 @@ namespace Humpback
 		auto dsView = _getCurrentDSBufferView();
 		m_commandList->OMSetRenderTargets(1, &backbufferView, true, &dsView);
 
-		//ID3D12DescriptorHeap* descHeaps[] = { m_cbvHeap.Get() };
-		//m_commandList->SetDescriptorHeaps(_countof(descHeaps), descHeaps);
-
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
 		int passCbvIndex = m_passCbvOffset + m_curFrameResourceIdx;;
@@ -220,7 +214,7 @@ namespace Humpback
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
 		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-		_renderRenderableObjects(m_commandList.Get(), m_opaqueRenderableList);
+		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
 		auto rt2PreBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -232,7 +226,6 @@ namespace Humpback
 		ID3D12CommandList* commands[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(commands), commands);
 
-		debugCounter++;
 		ThrowIfFailed(m_swapChain->Present(0, 0));
 		m_frameIndex = (m_frameIndex + 1) % FrameBufferCount;
 
@@ -500,7 +493,7 @@ namespace Humpback
 
 		mesh->drawArgs["grid"] = subMesh;
 
-		m_meshes["land"] = std::move(mesh);
+		m_meshes["landGeo"] = std::move(mesh);
 	}
 
 	void Renderer::_createWavesBuffers()
@@ -553,7 +546,7 @@ namespace Humpback
 		sm.startIndexLocation = 0;
 		
 		mesh->drawArgs["grid"] = sm;
-		m_meshes["wateGeo"] = std::move(mesh);
+		m_meshes["waterGeo"] = std::move(mesh);
 	}
 
 	void Renderer::_initD3D12()
@@ -752,83 +745,34 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		// TODO
+		auto wavesGO = std::make_unique<RenderableObject>();
+		wavesGO->mesh = m_meshes["waterGeo"].get();
+		auto wavesSubMesh = wavesGO->mesh->drawArgs["grid"];
+		wavesGO->WorldM = HMathHelper::Identity4x4();
+		wavesGO->cbIndex = 0;
+		wavesGO->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		wavesGO->indexCount = wavesSubMesh.indexCount;
+		wavesGO->startIndexLocation = wavesSubMesh.startIndexLocation;
+		wavesGO->baseVertexLocation = wavesSubMesh.baseVertexLocation;
 
-		//auto boxRitem = std::make_unique<RenderableObject>();
-		//XMStoreFloat4x4(&boxRitem->WorldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-		//boxRitem->cbIndex = 0;
-		//boxRitem->mesh = m_meshes["shapeGeo"].get();
-		//boxRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//boxRitem->indexCount = boxRitem->mesh->drawArgs["box"].indexCount;
-		//boxRitem->startIndexLocation = boxRitem->mesh->drawArgs["box"].startIndexLocation;
-		//boxRitem->baseVertexLocation = boxRitem->mesh->drawArgs["box"].baseVertexLocation;
-		//m_renderableList.push_back(std::move(boxRitem));
+		m_waveObj = wavesGO.get();
 
-		//auto gridRitem = std::make_unique<RenderableObject>();
-		//gridRitem->WorldM = HMathHelper::Identity4x4();
-		//gridRitem->cbIndex = 1;
-		//gridRitem->mesh = m_meshes["shapeGeo"].get();
-		//gridRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
-		//gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
-		//gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		//m_renderableList.push_back(std::move(gridRitem));
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(wavesGO.get());
 
-		//UINT objCBIndex = 2;
-		//for (int i = 0; i < 5; ++i)
-		//{
-		//	auto leftCylRitem = std::make_unique<RenderableObject>();
-		//	auto rightCylRitem = std::make_unique<RenderableObject>();
-		//	auto leftSphereRitem = std::make_unique<RenderableObject>();
-		//	auto rightSphereRitem = std::make_unique<RenderableObject>();
+		
+		auto gridGO = std::make_unique<RenderableObject>();
+		gridGO->WorldM = HMathHelper::Identity4x4();
+		gridGO->cbIndex = 1;
+		gridGO->mesh = m_meshes["landGeo"].get();
+		gridGO->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		gridGO->indexCount = wavesSubMesh.indexCount;
+		gridGO->startIndexLocation = wavesSubMesh.startIndexLocation;
+		gridGO->baseVertexLocation = wavesSubMesh.baseVertexLocation;
 
-		//	XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
-		//	XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(gridGO.get());
 
-		//	XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
-		//	XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
-
-		//	XMStoreFloat4x4(&leftCylRitem->WorldM, rightCylWorld);
-		//	leftCylRitem->cbIndex = objCBIndex++;
-		//	leftCylRitem->mesh = m_meshes["shapeGeo"].get();
-		//	leftCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//	leftCylRitem->indexCount = leftCylRitem->mesh->drawArgs["cylinder"].indexCount;
-		//	leftCylRitem->startIndexLocation = leftCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-		//	leftCylRitem->baseVertexLocation = leftCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
-
-		//	XMStoreFloat4x4(&rightCylRitem->WorldM, leftCylWorld);
-		//	rightCylRitem->cbIndex = objCBIndex++;
-		//	rightCylRitem->mesh = m_meshes["shapeGeo"].get();
-		//	rightCylRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//	rightCylRitem->indexCount = rightCylRitem->mesh->drawArgs["cylinder"].indexCount;
-		//	rightCylRitem->startIndexLocation = rightCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-		//	rightCylRitem->baseVertexLocation = rightCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
-
-		//	XMStoreFloat4x4(&leftSphereRitem->WorldM, leftSphereWorld);
-		//	leftSphereRitem->cbIndex = objCBIndex++;
-		//	leftSphereRitem->mesh = m_meshes["shapeGeo"].get();
-		//	leftSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//	leftSphereRitem->indexCount = leftSphereRitem->mesh->drawArgs["sphere"].indexCount;
-		//	leftSphereRitem->startIndexLocation = leftSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-		//	leftSphereRitem->baseVertexLocation = leftSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
-
-		//	XMStoreFloat4x4(&rightSphereRitem->WorldM, rightSphereWorld);
-		//	rightSphereRitem->cbIndex = objCBIndex++;
-		//	rightSphereRitem->mesh = m_meshes["shapeGeo"].get();
-		//	rightSphereRitem->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//	rightSphereRitem->indexCount = rightSphereRitem->mesh->drawArgs["sphere"].indexCount;
-		//	rightSphereRitem->startIndexLocation = rightSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-		//	rightSphereRitem->baseVertexLocation = rightSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
-
-		//	m_renderableList.push_back(std::move(leftCylRitem));
-		//	m_renderableList.push_back(std::move(rightCylRitem));
-		//	m_renderableList.push_back(std::move(leftSphereRitem));
-		//	m_renderableList.push_back(std::move(rightSphereRitem));
-		//}
-
-		//// All the render items are opaque.
-		//for (auto& e : m_renderableList)
-		//	m_opaqueRenderableList.push_back(e.get());
+		m_renderableList.push_back(std::move(wavesGO));
+		m_renderableList.push_back(std::move(gridGO));
 	}
 
 	void Renderer::_createFrameResources()
@@ -836,7 +780,7 @@ namespace Humpback
 		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
 		{
 			m_frameResources.push_back(
-				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size()));
+				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size(), m_waves->VertexCount()));
 		}
 	}
 

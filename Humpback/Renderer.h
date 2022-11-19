@@ -20,6 +20,11 @@ using Microsoft::WRL::ComPtr;
 
 namespace Humpback 
 {
+	enum class RenderLayer : int
+	{
+		Opaque = 0,
+		Count
+	};
 
 
 	class Renderer
@@ -73,6 +78,7 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
+		void _updateMainPassCB();
 
 		void _updateWaves();
 
@@ -139,7 +145,8 @@ namespace Humpback
 		
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
-		std::vector<RenderableObject*>		m_opaqueRenderableList;
+		std::vector<RenderableObject*> m_renderLayers[(int)RenderLayer::Count];
+
 		PassConstants						m_cbufferPerPass;
 
 

@@ -43,7 +43,7 @@ namespace Humpback
 	{
 	public:
 
-		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount);
+		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, unsigned int waveVertCount);
 		FrameResource(const FrameResource& rhs) = delete;
 		FrameResource& operator=(const FrameResource& rhs) = delete;
 		~FrameResource();
