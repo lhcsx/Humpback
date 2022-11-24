@@ -10,6 +10,7 @@
 #include "HMathHelper.h"
 #include "UploadBufferHelper.h"
 #include "Vertex.h"
+#include "Material.h"
 
 
 namespace Humpback
@@ -39,7 +40,7 @@ namespace Humpback
 	};
 
 
-	struct FrameResource
+	class FrameResource
 	{
 	public:
 
@@ -53,10 +54,8 @@ namespace Humpback
 
 		std::unique_ptr<UploadBuffer<ObjectConstants>> objCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<PassConstants>> passCBuffer = nullptr;
-
-		std::unique_ptr<UploadBuffer<Vertex>> wavesVB = nullptr;
+		std::unique_ptr<UploadBuffer<MaterialConstants>> materialCBuffer = nullptr;
 
 		unsigned int fence = 0;
 	};
-
 }

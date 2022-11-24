@@ -78,7 +78,6 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
-		void _updateMainPassCB();
 
 		void _updateWaves();
 
