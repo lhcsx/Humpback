@@ -52,7 +52,7 @@ namespace Humpback
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createSceneGeometry();
-		_createWavesBuffers();
+		_createMaterialsData();
 		_createRenderableObjects();
 		_createFrameResources();
 		_createPso();
@@ -83,8 +83,6 @@ namespace Humpback
 		}
 
 		_updateCBuffers();
-		
-		_updateWaves();
 	}
 
 	void Renderer::_updateCamera()
@@ -143,41 +141,6 @@ namespace Humpback
 		m_cbufferPerPass.FarZ = m_far;
 		
 		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
-	}
-
-	void Renderer::_updateWaves()
-	{
-		static float tBase = .0f;
-
-		int totaltime = m_timer->TotalTime();
-		if (totaltime - tBase >= 0.25f)
-		{
-			tBase += 0.25f;
-
-			int i = HMathHelper::Rand(4, m_waves->RowCount() - 5);
-			int j = HMathHelper::Rand(4, m_waves->ColumnCount() - 5);
-
-			float r = HMathHelper::RandF(0.2f, 0.5f);
-
-			m_waves->Disturb(i, j, r);
-		}
-
-		m_waves->Update(m_timer->DeltaTime());
-
-		// Update the wave vertex buffer with the new solution.
-		auto currWavesVB = m_curFrameResource->wavesVB.get();
-		for (size_t i = 0; i < m_waves->VertexCount(); i++)
-		{
-			Vertex v;
-
-			v.Position = m_waves->Position(i);
-			v.Color = XMFLOAT4(DirectX::Colors::DarkBlue);
-
-			currWavesVB->CopyData(i, v);
-		}
-
-		// Set the dynamic VB of the wave renderable object to the current frame VB.
-		m_waveObj->mesh->VertexBufferGPU = currWavesVB->Resource();
 	}
 
 	void Renderer::_render()
@@ -420,133 +383,196 @@ namespace Humpback
 
 	void Renderer::_createSceneGeometry()
 	{
-		m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
-
-		GeometryGenerator geoGen;
-		GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
-
-		std::vector<Vertex> vertices(grid.vertices.size());
-		for (size_t i = 0; i < grid.vertices.size(); i++)
-		{
-			auto& p = grid.vertices[i].Position;
-			vertices[i].Position = p;
-			vertices[i].Position.y = geoGen.GetHillsHeight(p.x, p.z);
-
-			// Color the vertex based on its height.
-			if (vertices[i].Position.y < -10.0f)
-			{
-				// Sandy beach color.
-				vertices[i].Color = XMFLOAT4(1.0f, 0.96f, 0.62f, 1.0f);
-			}
-			else if (vertices[i].Position.y < 5.0f)
-			{
-				// Light yellow-green.
-				vertices[i].Color = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
-			}
-			else if (vertices[i].Position.y < 12.0f)
-			{
-				// Dark yellow-green.
-				vertices[i].Color = XMFLOAT4(0.1f, 0.48f, 0.19f, 1.0f);
-			}
-			else if (vertices[i].Position.y < 20.0f)
-			{
-				// Dark brown.
-				vertices[i].Color = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.0f);
-			}
-			else
-			{
-				// White snow.
-				vertices[i].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-			}
-		}
-
-		
-		std::vector<std::uint16_t> indices = grid.GetIndices16();
-		
-		const unsigned int vbByteSize = vertices.size() * sizeof(Vertex);
-		const unsigned int ibByteSize = indices.size() * sizeof(std::uint16_t);
-
-		auto mesh = std::make_unique<Mesh>();
-		mesh->Name = "land";
-		
-		ThrowIfFailed(D3DCreateBlob(vbByteSize, &mesh->VertexBufferCPU));
-		CopyMemory(mesh->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-
-		ThrowIfFailed(D3DCreateBlob(ibByteSize, &mesh->IndexBufferCPU));
-		CopyMemory(mesh->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-
-		mesh->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
-			vertices.data(), vbByteSize, mesh->VertexBufferUploader);
-
-		mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
-			indices.data(), ibByteSize, mesh->IndexBufferUploader);
-
-		mesh->vertexByteStride = sizeof(Vertex);
-		mesh->vertexBufferByteSize = vbByteSize;
-		mesh->indexFormat = DXGI_FORMAT_R16_UINT;
-		mesh->indexBufferByteSize = ibByteSize;
-
-		SubMesh subMesh;
-		subMesh.baseVertexLocation = 0;
-		subMesh.indexCount = indices.size();
-		subMesh.startIndexLocation = 0;
-
-		mesh->drawArgs["grid"] = subMesh;
-
-		m_meshes["landGeo"] = std::move(mesh);
+		_createSimpleGeometry();
+		_loadGeometryFromFile();
 	}
 
-	void Renderer::_createWavesBuffers()
+	void Renderer::_createSimpleGeometry()
 	{
-		std::vector<std::uint16_t> indices(3 * m_waves->TriangleCount());
+		GeometryGenerator geoGen;
+		GeometryGenerator::MeshData box = geoGen.CreateBox(1.5f, 0.5f, 1.5f, 3);
+		GeometryGenerator::MeshData grid = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
+		GeometryGenerator::MeshData sphere = geoGen.CreateSphere(0.5f, 20, 20);
+		GeometryGenerator::MeshData cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
 
-		int m = m_waves->RowCount();
-		int n = m_waves->ColumnCount();
-		int k = 0;
-		for (size_t i = 0; i < m - 1; i++)
+		//
+		// We are concatenating all the geometry into one big vertex/index buffer.  So
+		// define the regions in the buffer each submesh covers.
+		//
+
+		// Cache the vertex offsets to each object in the concatenated vertex buffer.
+		UINT boxVertexOffset = 0;
+		UINT gridVertexOffset = (UINT)box.vertices.size();
+		UINT sphereVertexOffset = gridVertexOffset + (UINT)grid.vertices.size();
+		UINT cylinderVertexOffset = sphereVertexOffset + (UINT)sphere.vertices.size();
+
+		// Cache the starting index for each object in the concatenated index buffer.
+		UINT boxIndexOffset = 0;
+		UINT gridIndexOffset = (UINT)box.indices32.size();
+		UINT sphereIndexOffset = gridIndexOffset + (UINT)grid.indices32.size();
+		UINT cylinderIndexOffset = sphereIndexOffset + (UINT)sphere.indices32.size();
+
+		SubMesh boxSubmesh;
+		boxSubmesh.indexCount = (UINT)box.indices32.size();
+		boxSubmesh.startIndexLocation = boxIndexOffset;
+		boxSubmesh.baseVertexLocation = boxVertexOffset;
+
+		SubMesh gridSubmesh;
+		gridSubmesh.indexCount = (UINT)grid.indices32.size();
+		gridSubmesh.startIndexLocation = gridIndexOffset;
+		gridSubmesh.baseVertexLocation = gridVertexOffset;
+
+		SubMesh sphereSubmesh;
+		sphereSubmesh.indexCount = (UINT)sphere.indices32.size();
+		sphereSubmesh.startIndexLocation = sphereIndexOffset;
+		sphereSubmesh.baseVertexLocation = sphereVertexOffset;
+
+		SubMesh cylinderSubmesh;
+		cylinderSubmesh.indexCount = (UINT)cylinder.indices32.size();
+		cylinderSubmesh.startIndexLocation = cylinderIndexOffset;
+		cylinderSubmesh.baseVertexLocation = cylinderVertexOffset;
+
+		//
+		// Extract the vertex elements we are interested in and pack the
+		// vertices of all the meshes into one vertex buffer.
+		//
+
+		auto totalVertexCount =
+			box.vertices.size() +
+			grid.vertices.size() +
+			sphere.vertices.size() +
+			cylinder.vertices.size();
+
+		std::vector<Vertex> vertices(totalVertexCount);
+
+		UINT k = 0;
+		for (size_t i = 0; i < box.vertices.size(); ++i, ++k)
 		{
-			for (size_t j = 0; j < n - 1; j++)
-			{
-				indices[k] = i * n + j;
-				indices[k + 1] = i * n + j + 1;
-				indices[k + 2] = (i + 1) * n + j;
-
-				indices[k + 3] = (i + 1) * n + j;
-				indices[k + 4] = i * n + j + 1;
-				indices[k + 5] = (i + 1) * n + j + 1;
-
-				k += 6; // next quad
-			}
+			vertices[k].position = box.vertices[i].Position;
+			vertices[k].normal = box.vertices[i].Normal;
 		}
-		
-		unsigned int vbByteSize = m_waves->VertexCount() * sizeof(Vertex);
-		unsigned int ibByteSize = (unsigned int)indices.size() * sizeof(std::uint16_t);
-		
-		auto mesh = std::make_unique<Mesh>();
-		mesh->Name = "wateGeo";
 
-		// set dynamically.
-		mesh->VertexBufferCPU = nullptr;
-		mesh->VertexBufferGPU = nullptr;
+		for (size_t i = 0; i < grid.vertices.size(); ++i, ++k)
+		{
+			vertices[k].position = grid.vertices[i].Position;
+			vertices[k].normal = grid.vertices[i].Normal;
+		}
 
-		ThrowIfFailed(D3DCreateBlob(ibByteSize, &mesh->IndexBufferCPU));
-		CopyMemory(mesh->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+		for (size_t i = 0; i < sphere.vertices.size(); ++i, ++k)
+		{
+			vertices[k].position = sphere.vertices[i].Position;
+			vertices[k].normal = sphere.vertices[i].Normal;
+		}
 
-		mesh->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
-			indices.data(), ibByteSize, mesh->IndexBufferUploader);
+		for (size_t i = 0; i < cylinder.vertices.size(); ++i, ++k)
+		{
+			vertices[k].position = cylinder.vertices[i].Position;
+			vertices[k].normal = cylinder.vertices[i].Normal;
+		}
 
-		mesh->vertexByteStride = sizeof(Vertex);
-		mesh->vertexBufferByteSize = vbByteSize;
-		mesh->indexFormat = DXGI_FORMAT_R16_UINT;
-		mesh->indexBufferByteSize = ibByteSize;
+		std::vector<std::uint16_t> indices;
+		indices.insert(indices.end(), std::begin(box.GetIndices16()), std::end(box.GetIndices16()));
+		indices.insert(indices.end(), std::begin(grid.GetIndices16()), std::end(grid.GetIndices16()));
+		indices.insert(indices.end(), std::begin(sphere.GetIndices16()), std::end(sphere.GetIndices16()));
+		indices.insert(indices.end(), std::begin(cylinder.GetIndices16()), std::end(cylinder.GetIndices16()));
 
-		SubMesh sm;
-		sm.indexCount = indices.size();
-		sm.baseVertexLocation = 0;
-		sm.startIndexLocation = 0;
-		
-		mesh->drawArgs["grid"] = sm;
-		m_meshes["waterGeo"] = std::move(mesh);
+		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+
+		auto geo = std::make_unique<Mesh>();
+		geo->Name = "shapeGeo";
+
+		ThrowIfFailed(D3DCreateBlob(vbByteSize, &geo->vertexBufferCPU));
+		CopyMemory(geo->vertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+		ThrowIfFailed(D3DCreateBlob(ibByteSize, &geo->indexBufferCPU));
+		CopyMemory(geo->indexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+		geo->vertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(),
+			m_commandList.Get(), vertices.data(), vbByteSize, geo->vertexBufferUploader);
+
+		geo->indexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(),
+			m_commandList.Get(), indices.data(), ibByteSize, geo->indexBufferUploader);
+
+		geo->vertexByteStride = sizeof(Vertex);
+		geo->vertexBufferByteSize = vbByteSize;
+		geo->indexFormat = DXGI_FORMAT_R16_UINT;
+		geo->indexBufferByteSize = ibByteSize;
+
+		geo->drawArgs["box"] = boxSubmesh;
+		geo->drawArgs["grid"] = gridSubmesh;
+		geo->drawArgs["sphere"] = sphereSubmesh;
+		geo->drawArgs["cylinder"] = cylinderSubmesh;
+
+		m_meshes[geo->Name] = std::move(geo);
+	}
+
+	void Renderer::_loadGeometryFromFile()
+	{
+		std::ifstream fin("Models/skull.txt");
+
+		if (!fin)
+		{
+			MessageBox(0, L"Models/skull.txt not found", 0, 0);
+			return;
+		}
+
+		unsigned int vertCount = 0;
+		unsigned int primCount = 0;
+		std::string ignore;
+
+		fin >> ignore >> vertCount;
+		fin >> ignore >> primCount;
+		fin >> ignore >> ignore >> ignore >> ignore;
+
+		std::vector<Vertex> vertices(vertCount);
+		for (size_t i = 0; i < vertCount; i++)
+		{
+			fin >> vertices[i].position.x >> vertices[i].position.y >> vertices[i].position.z;
+			fin >> vertices[i].normal.x >> vertices[i].normal.y >> vertices[i].normal.z;
+		}
+
+		fin >> ignore >> ignore >> ignore;
+
+		std::vector<std::int32_t> indices(primCount * 3);
+		for (size_t i = 0; i < primCount; i++)
+		{
+			fin >> indices[i * 3 + 0] >> indices[i * 3 + 1] >> indices[i * 3 + 2];
+		}
+
+		fin.close();
+
+		unsigned int vbByteSize = vertices.size() * sizeof(Vertex);
+		unsigned int ibByteSize = indices.size() * sizeof(std::uint32_t);
+
+		auto skullMesh = std::make_unique<Mesh>();
+		skullMesh->Name = "skullGeo";
+
+		ThrowIfFailed(D3DCreateBlob(vbByteSize, &(skullMesh->vertexBufferCPU)));
+		CopyMemory(skullMesh->vertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+
+		ThrowIfFailed(D3DCreateBlob(ibByteSize, &(skullMesh->indexBufferCPU)));
+		CopyMemory(skullMesh->indexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+
+		skullMesh->vertexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			vertices.data(), vbByteSize, skullMesh->vertexBufferUploader);
+
+		skullMesh->indexBufferGPU = D3DUtil::CreateDefaultBuffer(m_device.Get(), m_commandList.Get(),
+			indices.data(), ibByteSize, skullMesh->indexBufferUploader);
+
+		skullMesh->vertexByteStride = sizeof(Vertex);
+		skullMesh->vertexBufferByteSize = vbByteSize;
+		skullMesh->indexFormat = DXGI_FORMAT_R32_UINT;
+		skullMesh->indexBufferByteSize = ibByteSize;
+
+		SubMesh skullSM;
+		skullSM.indexCount = indices.size();
+		skullSM.baseVertexLocation = 0;
+		skullSM.startIndexLocation = 0;
+
+		skullMesh->drawArgs["skull"] = skullSM;
+
+		m_meshes[skullMesh->Name] = std::move(skullMesh);
 	}
 
 	void Renderer::_initD3D12()
@@ -648,15 +674,16 @@ namespace Humpback
 
 	void Renderer::_createRootSignature()
 	{
-		CD3DX12_ROOT_PARAMETER slotRootParameter[2];
+		CD3DX12_ROOT_PARAMETER slotRootParameter[3];
 
 		// Create root CBVs
 		slotRootParameter[0].InitAsConstantBufferView(0);
 		slotRootParameter[1].InitAsConstantBufferView(1);
+		slotRootParameter[2].InitAsConstantBufferView(2);
 
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, slotRootParameter, 0, 
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, 
 			nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 
@@ -694,9 +721,12 @@ namespace Humpback
 		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
 		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
 
+		// todo 
+		// texcoord
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 	}
 
@@ -745,34 +775,47 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		auto wavesGO = std::make_unique<RenderableObject>();
-		wavesGO->mesh = m_meshes["waterGeo"].get();
-		auto wavesSubMesh = wavesGO->mesh->drawArgs["grid"];
-		wavesGO->WorldM = HMathHelper::Identity4x4();
-		wavesGO->cbIndex = 0;
-		wavesGO->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		wavesGO->indexCount = wavesSubMesh.indexCount;
-		wavesGO->startIndexLocation = wavesSubMesh.startIndexLocation;
-		wavesGO->baseVertexLocation = wavesSubMesh.baseVertexLocation;
+		// TODO
+	}
 
-		m_waveObj = wavesGO.get();
+	void Renderer::_createMaterialsData()
+	{
+		auto bricksMat = std::make_unique<Material>();
+		bricksMat->name = "mat_bricks";
+		bricksMat->matCBIdx = 0;
+		bricksMat->diffuseSrvHeapIndex = 0;
+		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
+		bricksMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		bricksMat->roughness = 0.1f;
 
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(wavesGO.get());
+		auto stoneMat = std::make_unique<Material>();
+		stoneMat->name = "mat_stone";
+		stoneMat->matCBIdx = 1;
+		stoneMat->diffuseSrvHeapIndex = 1;
+		stoneMat->diffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
+		stoneMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+		stoneMat->roughness = 0.3f;
 
-		
-		auto gridGO = std::make_unique<RenderableObject>();
-		gridGO->WorldM = HMathHelper::Identity4x4();
-		gridGO->cbIndex = 1;
-		gridGO->mesh = m_meshes["landGeo"].get();
-		gridGO->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		gridGO->indexCount = wavesSubMesh.indexCount;
-		gridGO->startIndexLocation = wavesSubMesh.startIndexLocation;
-		gridGO->baseVertexLocation = wavesSubMesh.baseVertexLocation;
+		auto tileMat = std::make_unique<Material>();
+		tileMat->name = "mat_tile";
+		tileMat->matCBIdx = 2;
+		tileMat->diffuseSrvHeapIndex = 2;
+		tileMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
+		tileMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		tileMat->roughness = 0.2f;
 
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(gridGO.get());
+		auto skullMat = std::make_unique<Material>();
+		skullMat->name = "mat_skull";
+		skullMat->matCBIdx = 3;
+		skullMat->diffuseSrvHeapIndex = 3;
+		skullMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+		skullMat->roughness = 0.3f;
 
-		m_renderableList.push_back(std::move(wavesGO));
-		m_renderableList.push_back(std::move(gridGO));
+		m_materials["mat_bricks"] = std::move(bricksMat);
+		m_materials["mat_stone"] = std::move(stoneMat);
+		m_materials["mat_tile"] = std::move(tileMat);
+		m_materials["mat_skull"] = std::move(skullMat);
 	}
 
 	void Renderer::_createFrameResources()
@@ -780,7 +823,7 @@ namespace Humpback
 		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
 		{
 			m_frameResources.push_back(
-				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size(), m_waves->VertexCount()));
+				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size()));
 		}
 	}
 

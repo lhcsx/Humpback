@@ -23,18 +23,18 @@ namespace Humpback
 		int baseVertexLocation;
 	};
 
-	struct Mesh
+	class Mesh
 	{
 	public:
 
-		Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;
-		Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferCPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3DBlob> vertexBufferCPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3DBlob> indexBufferCPU = nullptr;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferGPU = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferGPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> vertexBufferGPU = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> indexBufferGPU = nullptr;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> vertexBufferUploader = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> indexBufferUploader = nullptr;
 
 		// Data about the buffers.
 		unsigned int vertexByteStride = 0;
@@ -50,7 +50,7 @@ namespace Humpback
 		D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const
 		{
 			D3D12_VERTEX_BUFFER_VIEW vbv;
-			vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
+			vbv.BufferLocation = vertexBufferGPU->GetGPUVirtualAddress();
 			vbv.StrideInBytes = vertexByteStride;
 			vbv.SizeInBytes = vertexBufferByteSize;
 			return vbv;
@@ -59,7 +59,7 @@ namespace Humpback
 		D3D12_INDEX_BUFFER_VIEW IndexBufferView() const
 		{
 			D3D12_INDEX_BUFFER_VIEW ibv;
-			ibv.BufferLocation = IndexBufferGPU->GetGPUVirtualAddress();
+			ibv.BufferLocation = indexBufferGPU->GetGPUVirtualAddress();
 			ibv.Format = indexFormat;
 			ibv.SizeInBytes = indexBufferByteSize;
 			return ibv;

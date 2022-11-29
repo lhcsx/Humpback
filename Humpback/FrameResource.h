@@ -37,6 +37,9 @@ namespace Humpback
 		float FarZ = .0f;
 		float TotalTime = 0.0f;
 		float DeltaTime = 0.0f;
+
+		// TODO
+		// Light
 	};
 
 
@@ -44,7 +47,7 @@ namespace Humpback
 	{
 	public:
 
-		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, unsigned int waveVertCount);
+		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, unsigned int materialCount);
 		FrameResource(const FrameResource& rhs) = delete;
 		FrameResource& operator=(const FrameResource& rhs) = delete;
 		~FrameResource();

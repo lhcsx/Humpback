@@ -10,7 +10,7 @@ namespace Humpback
 {
 	struct Vertex
 	{
-		DirectX::XMFLOAT3 Position;
-		DirectX::XMFLOAT4 Color;
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT3 normal;
 	};
 }

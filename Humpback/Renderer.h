@@ -12,7 +12,6 @@
 #include "UploadBufferHelper.h"
 #include "HMathHelper.h"
 #include "RenderableObject.h"
-#include "Waves.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -60,12 +59,15 @@ namespace Humpback
 		void _waitForPreviousFrame();
 
 		void _createSceneGeometry();
-		void _createWavesBuffers();
+		void _createSimpleGeometry();
+		void _loadGeometryFromFile();
+
 		void _createRootSignature();
 		void _createShadersAndInputLayout();
 		void _createPso();
 		void _createFrameResources();
 		void _createRenderableObjects();
+		void _createMaterialsData();
 
 		void _updateTheViewport();
 
@@ -78,9 +80,6 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
-
-		void _updateWaves();
-
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -143,14 +142,12 @@ namespace Humpback
 		DirectX::XMFLOAT4X4					m_projectionMatrix;
 		
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
+		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
+
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
 		std::vector<RenderableObject*> m_renderLayers[(int)RenderLayer::Count];
 
 		PassConstants						m_cbufferPerPass;
 
-
-		// Scene
-		std::unique_ptr<Waves> m_waves;
-		RenderableObject* m_waveObj = nullptr;
 	};
 }
