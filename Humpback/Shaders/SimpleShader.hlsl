@@ -68,20 +68,20 @@ VertexOut VSMain(VertexIn vin)
 
 float4 PSMain(VertexOut pin) : SV_Target
 {
+    float4 result = 1.0;
     pin.normal = normalize(pin.normal);
 
     float3 eyeDir = normalize(gEyePosW - pin.posW);
 
-    float ambient = gAmbientLight * albedo;
+    float3 ambient = gAmbientLight.rgb * albedo.rgb;
     
     float shiniess = 1.0f - roughness;
     Material mat = { albedo, fresnelR0, shiniess };
     float3 shadowFactor = 1.0f;
-    float4 directLight = ComputeLighting(lights, mat, pin.posW, pin.normal, eyeDir, shadowFactor);
+    float3 directLight = ComputeLighting(lights, mat, pin.posW, pin.normal, eyeDir, shadowFactor);
     
-    //float4 result = directLight + ambient;
-    float4 result = albedo;
-    result.a = 1.0;
+    float3 l = directLight + ambient;
+    result = float4(l, albedo.a);
 
 
     return result;

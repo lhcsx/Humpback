@@ -142,6 +142,7 @@ namespace Humpback
 		m_cbufferPerPass.nearZ = m_near;
 		m_cbufferPerPass.farZ = m_far;
 		m_cbufferPerPass.cameraPosW = m_cameraPos;
+		m_cbufferPerPass.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
 		m_cbufferPerPass.lights[0].direction = { 0.57735f, -0.57735f, 0.57735f };
 		m_cbufferPerPass.lights[0].strength = { 0.6f, 0.6f, 0.6f };
 		m_cbufferPerPass.lights[1].direction = { -0.57735f, -0.57735f, 0.57735f };
@@ -769,7 +770,6 @@ namespace Humpback
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 	}
 
