@@ -23,6 +23,8 @@ using namespace DirectX::Colors;
 
 namespace Humpback 
 {
+	class Material;
+
 	extern const int FRAME_RESOURCE_COUNT = 3;
 
 	Renderer::Renderer(int width, int height, HWND hwnd) :
@@ -40,8 +42,7 @@ namespace Humpback
 
 	void Renderer::Initialize()
 	{
-		m_timer = std::make_unique<Timer>();
-		m_timer->Reset();
+		_initTimer();
 
 		_initD3D12();
 
@@ -88,15 +89,15 @@ namespace Humpback
 	void Renderer::_updateCamera()
 	{
 		// Convert Spherical to Cartesian coordinates.
-		float x = m_radius * sinf(m_phi) * cosf(m_theta);
-		float z = m_radius * sinf(m_phi) * sinf(m_theta);
-		float y = m_radius * cosf(m_phi);
-
+		m_cameraPos.x = m_radius * sinf(m_phi) * cosf(m_theta);
+		m_cameraPos.z = m_radius * sinf(m_phi) * sinf(m_theta);
+		m_cameraPos.y = m_radius * cosf(m_phi);
 
 		// Build the view matrix.
-		XMVECTOR cameraPos = XMVectorSet(x, y, z, 1.0f);
+		XMVECTOR cameraPos = XMVectorSet(m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, 1.0f);
 		XMVECTOR cameraTarget = XMVectorZero();
 		XMVECTOR cameraUp = XMVectorSet(.0f, 1.0f, 0.0f, 0.0f);
+
 
 		XMMATRIX view = XMMatrixLookAtLH(cameraPos, cameraTarget, cameraUp);
 		XMStoreFloat4x4(&m_viewMatrix, view);
@@ -105,6 +106,7 @@ namespace Humpback
 	void Renderer::_updateCBuffers()
 	{
 		_updateCBufferPerObject();
+		_updateMatCBuffer();
 		_updateCBufferPerPass();
 	}
 
@@ -115,7 +117,7 @@ namespace Humpback
 		{
 			if (obj->NumFramesDirty > 0)
 			{
-				XMMATRIX worldM = XMLoadFloat4x4(&(obj->WorldM));
+				XMMATRIX worldM = XMLoadFloat4x4(&(obj->worldM));
 
 				ObjectConstants objConstants;
 				XMStoreFloat4x4(&(objConstants.WorldM), XMMatrixTranspose(worldM));
@@ -134,13 +136,44 @@ namespace Humpback
 
 		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
 
-		XMStoreFloat4x4(&m_cbufferPerPass.ViewM, XMMatrixTranspose(viewM));
-		XMStoreFloat4x4(&m_cbufferPerPass.ProjM, XMMatrixTranspose(projM));
-		XMStoreFloat4x4(&m_cbufferPerPass.ViewProjM, XMMatrixTranspose(viewProjM));
-		m_cbufferPerPass.NearZ = m_near;
-		m_cbufferPerPass.FarZ = m_far;
+		XMStoreFloat4x4(&m_cbufferPerPass.viewM, XMMatrixTranspose(viewM));
+		XMStoreFloat4x4(&m_cbufferPerPass.projM, XMMatrixTranspose(projM));
+		XMStoreFloat4x4(&m_cbufferPerPass.viewProjM, XMMatrixTranspose(viewProjM));
+		m_cbufferPerPass.nearZ = m_near;
+		m_cbufferPerPass.farZ = m_far;
+		m_cbufferPerPass.cameraPosW = m_cameraPos;
+		m_cbufferPerPass.lights[0].direction = { 0.57735f, -0.57735f, 0.57735f };
+		m_cbufferPerPass.lights[0].strength = { 0.6f, 0.6f, 0.6f };
+		m_cbufferPerPass.lights[1].direction = { -0.57735f, -0.57735f, 0.57735f };
+		m_cbufferPerPass.lights[1].strength = { 0.3f, 0.3f, 0.3f };
+		m_cbufferPerPass.lights[2].direction = { 0.0f, -0.707f, -0.707f };
+		m_cbufferPerPass.lights[2].strength = { 0.15f, 0.15f, 0.15f };
 		
 		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
+	}
+
+	void Renderer::_updateMatCBuffer()
+	{
+		auto curMatCB = m_curFrameResource->materialCBuffer.get();
+		for (auto& m : m_materials)
+		{
+			Material* pMat = m.second.get();
+			if (pMat->numFramesDirty > 0)
+			{
+				
+				MaterialConstants matConstants;
+				matConstants.diffuseAlbedo = pMat->diffuseAlbedo;
+				matConstants.fresnelR0 = pMat->fresnelR0;
+				matConstants.roughness = pMat->roughness;
+				
+				XMMATRIX matrixMatTrans = XMLoadFloat4x4(&pMat->matTransform);
+				XMStoreFloat4x4(&matConstants.matTransform, XMMatrixTranspose(matrixMatTrans));
+
+				curMatCB->CopyData(pMat->matCBIdx, matConstants);
+
+				--pMat->numFramesDirty;
+			}
+		}
 	}
 
 	void Renderer::_render()
@@ -171,11 +204,9 @@ namespace Humpback
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
-		int passCbvIndex = m_passCbvOffset + m_curFrameResourceIdx;;
-
 		// Bind per-pass constant buffer.
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
-		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
@@ -208,6 +239,9 @@ namespace Humpback
 		auto objCB = m_curFrameResource->objCBuffer->Resource();
 		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
 
+		auto matCB = m_curFrameResource->materialCBuffer->Resource();
+		auto matCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(MaterialConstants));
+
 		for (size_t i = 0; i < objList.size(); i++)
 		{
 			auto obj = objList[i];
@@ -227,7 +261,12 @@ namespace Humpback
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
 			objCBAddress += obj->cbIndex * objCBByteSize;
 
+			D3D12_GPU_VIRTUAL_ADDRESS matCBAdress = matCB->GetGPUVirtualAddress();
+			matCBAdress += obj->material->matCBIdx * matCBByteSize;
+
+
 			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(1, matCBAdress);
 
 
 			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
@@ -379,6 +418,12 @@ namespace Humpback
 			ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValue, m_fenceEvent));
 			WaitForSingleObject(m_fenceEvent, INFINITY);
 		}
+	}
+
+	void Renderer::_initTimer()
+	{
+		m_timer = std::make_unique<Timer>();
+		m_timer->Reset();
 	}
 
 	void Renderer::_createSceneGeometry()
@@ -721,8 +766,6 @@ namespace Humpback
 		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
 		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
 
-		// todo 
-		// texcoord
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -775,8 +818,101 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		// TODO
-	}
+		auto boxGO = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
+		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
+		boxGO->cbIndex = 0;
+		boxGO->material = m_materials["mat_stone"].get();
+		boxGO->mesh = m_meshes["shapeGeo"].get();
+		boxGO->indexCount = boxGO->mesh->drawArgs["box"].indexCount;
+		boxGO->startIndexLocation = boxGO->mesh->drawArgs["box"].startIndexLocation;
+		boxGO->baseVertexLocation = boxGO->mesh->drawArgs["box"].baseVertexLocation;
+		m_renderableList.push_back(std::move(boxGO));
+
+		auto gridRitem = std::make_unique<RenderableObject>();
+		gridRitem->worldM = HMathHelper::Identity4x4();
+		XMStoreFloat4x4(&gridRitem->texTrans, XMMatrixScaling(8.0f, 8.0f, 1.0f));
+		gridRitem->cbIndex = 1;
+		gridRitem->material = m_materials["mat_tile"].get();
+		gridRitem->mesh = m_meshes["shapeGeo"].get();
+		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
+		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
+		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
+		m_renderableList.push_back(std::move(gridRitem));
+
+		auto skullRitem = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
+		skullRitem->texTrans = HMathHelper::Identity4x4();
+		skullRitem->cbIndex = 2;
+		skullRitem->material = m_materials["mat_skull"].get();
+		skullRitem->mesh = m_meshes["skullGeo"].get();
+		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
+		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
+		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
+		m_renderableList.push_back(std::move(skullRitem));
+
+		XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+		UINT objCBIndex = 3;
+		for (int i = 0; i < 5; ++i)
+		{
+			auto leftCylRitem = std::make_unique<RenderableObject>();
+			auto rightCylRitem = std::make_unique<RenderableObject>();
+			auto leftSphereRitem = std::make_unique<RenderableObject>();
+			auto rightSphereRitem = std::make_unique<RenderableObject>();
+
+			XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
+			XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
+
+			XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
+			XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
+
+			XMStoreFloat4x4(&leftCylRitem->worldM, rightCylWorld);
+			XMStoreFloat4x4(&leftCylRitem->texTrans, brickTexTransform);
+			leftCylRitem->cbIndex = objCBIndex++;
+			leftCylRitem->material = m_materials["mat_bricks"].get();
+			leftCylRitem->mesh = m_meshes["shapeGeo"].get();
+			leftCylRitem->indexCount = leftCylRitem->mesh->drawArgs["cylinder"].indexCount;
+			leftCylRitem->startIndexLocation = leftCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
+			leftCylRitem->baseVertexLocation = leftCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
+
+			XMStoreFloat4x4(&rightCylRitem->worldM, leftCylWorld);
+			XMStoreFloat4x4(&rightCylRitem->texTrans, brickTexTransform);
+			rightCylRitem->cbIndex = objCBIndex++;
+			rightCylRitem->material = m_materials["mat_bricks"].get();
+			rightCylRitem->mesh = m_meshes["shapeGeo"].get();
+			rightCylRitem->indexCount = rightCylRitem->mesh->drawArgs["cylinder"].indexCount;
+			rightCylRitem->startIndexLocation = rightCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
+			rightCylRitem->baseVertexLocation = rightCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
+
+			XMStoreFloat4x4(&leftSphereRitem->worldM, leftSphereWorld);
+			leftSphereRitem->texTrans = HMathHelper::Identity4x4();
+			leftSphereRitem->cbIndex = objCBIndex++;
+			leftSphereRitem->material = m_materials["mat_stone"].get();
+			leftSphereRitem->mesh = m_meshes["shapeGeo"].get();
+			leftSphereRitem->indexCount = leftSphereRitem->mesh->drawArgs["sphere"].indexCount;
+			leftSphereRitem->startIndexLocation = leftSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
+			leftSphereRitem->baseVertexLocation = leftSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
+
+			XMStoreFloat4x4(&rightSphereRitem->worldM, rightSphereWorld);
+			rightSphereRitem->texTrans = HMathHelper::Identity4x4();
+			rightSphereRitem->cbIndex = objCBIndex++;
+			rightSphereRitem->material = m_materials["mat_stone"].get();
+			rightSphereRitem->mesh = m_meshes["shapeGeo"].get();
+			rightSphereRitem->indexCount = rightSphereRitem->mesh->drawArgs["sphere"].indexCount;
+			rightSphereRitem->startIndexLocation = rightSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
+			rightSphereRitem->baseVertexLocation = rightSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
+
+			m_renderableList.push_back(std::move(leftCylRitem));
+			m_renderableList.push_back(std::move(rightCylRitem));
+			m_renderableList.push_back(std::move(leftSphereRitem));
+			m_renderableList.push_back(std::move(rightSphereRitem));
+		}
+
+		for (auto& e : m_renderableList)
+		{
+			m_renderLayers[(int)RenderLayer::Opaque].push_back(e.get());
+		}
+	}	
 
 	void Renderer::_createMaterialsData()
 	{
@@ -820,10 +956,12 @@ namespace Humpback
 
 	void Renderer::_createFrameResources()
 	{
+
 		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
 		{
 			m_frameResources.push_back(
-				std::make_unique<FrameResource>(m_device.Get(), 1, m_renderableList.size()));
+				std::make_unique<FrameResource>(m_device.Get(), 1, 
+					m_renderableList.size(), m_materials.size()));
 		}
 	}
 

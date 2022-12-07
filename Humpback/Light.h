@@ -10,6 +10,10 @@
 
 namespace Humpback
 {
+
+#define MaxLights 16
+
+
 	struct Light
 	{
 		DirectX::XMFLOAT3 strength = { 0.5f, 0.5f, 0.5f };

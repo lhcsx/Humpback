@@ -11,6 +11,7 @@
 #include "UploadBufferHelper.h"
 #include "Vertex.h"
 #include "Material.h"
+#include "Light.h"
 
 
 namespace Humpback
@@ -23,23 +24,24 @@ namespace Humpback
 
 	struct PassConstants
 	{
-		DirectX::XMFLOAT4X4 ViewM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 InvViewM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 ProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 InvProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 ViewProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 InvViewProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT3 CameraPosW = { .0f, .0f, .0f };
+		DirectX::XMFLOAT4X4 viewM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invViewM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 projM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 viewProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invViewProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT3 cameraPosW = { .0f, .0f, .0f };
 		float cbPerObjectPad1 = 0.0f;
-		DirectX::XMFLOAT2 RenderTargetSize = { .0f, .0f };
-		DirectX::XMFLOAT2 InvRenderTargetSize = { .0f, .0f };
-		float NearZ = .0f;
-		float FarZ = .0f;
-		float TotalTime = 0.0f;
-		float DeltaTime = 0.0f;
-
-		// TODO
-		// Light
+		DirectX::XMFLOAT2 renderTargetSize = { .0f, .0f };
+		DirectX::XMFLOAT2 invRenderTargetSize = { .0f, .0f };
+		float nearZ = .0f;
+		float farZ = .0f;
+		float totalTime = 0.0f;
+		float deltaTime = 0.0f;
+		
+		DirectX::XMFLOAT4 ambient = { 0.0f, 0.0f, 0.0f, 1.0f };
+		
+		Light lights[MaxLights];
 	};
 
 

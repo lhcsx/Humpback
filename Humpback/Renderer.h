@@ -57,6 +57,7 @@ namespace Humpback
 		void _createRtvAndDsvDescriptorHeaps();
 		void _cleanUp();
 		void _waitForPreviousFrame();
+		void _initTimer();
 
 		void _createSceneGeometry();
 		void _createSimpleGeometry();
@@ -80,6 +81,7 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
+		void _updateMatCBuffer();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -140,6 +142,7 @@ namespace Humpback
 
 		DirectX::XMFLOAT4X4					m_viewMatrix;
 		DirectX::XMFLOAT4X4					m_projectionMatrix;
+		DirectX::XMFLOAT3					m_cameraPos;
 		
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;

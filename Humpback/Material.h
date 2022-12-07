@@ -1,6 +1,8 @@
 // (c) Li Hongcheng
 // 2022-11-19
 
+#pragma once
+
 
 #include <string>
 #include <DirectXMath.h>
