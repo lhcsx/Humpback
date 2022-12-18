@@ -4,6 +4,17 @@
 
 #include "Lighting.hlsl"
 
+
+Texture2D gDiffuseMap : register(t0);
+
+SamplerState samPointWrap : register(s0);
+SamplerState samPointClamp : register(s1);
+SamplerState samLinearWrap : register(s2);
+SamplerState samLinearClamp : register(s3);
+SamplerState samAniWrap : register(s4);
+SamplerState samAniClamp : register(s5);
+
+
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
@@ -42,6 +53,7 @@ struct VertexIn
 {
     float3 posL  : POSITION;
     float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 struct VertexOut
@@ -49,6 +61,7 @@ struct VertexOut
     float4 posH  : SV_POSITION;
     float3 posW : POSITION;
     float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 VertexOut VSMain(VertexIn vin)

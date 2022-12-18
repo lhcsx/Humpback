@@ -15,6 +15,7 @@
 #include "D3DUtil.h"
 #include "Vertex.h"
 #include "GeometryGenetator.h"
+#include "DDSTextureLoader.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -50,6 +51,8 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
+		_loadTextures();
+		_createDescriptorHeaps();
 		_createRootSignature();
 		_createShadersAndInputLayout();
 		_createSceneGeometry();
@@ -259,15 +262,18 @@ namespace Humpback
 
 			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
 
+			CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+			tex.Offset(obj->material->diffuseSrvHeapIndex, m_cbvSrvUavDescriptorSize);
+
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
 			objCBAddress += obj->cbIndex * objCBByteSize;
 
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAdress = matCB->GetGPUVirtualAddress();
 			matCBAdress += obj->material->matCBIdx * matCBByteSize;
 
-
-			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-			cmdList->SetGraphicsRootConstantBufferView(1, matCBAdress);
+			cmdList->SetGraphicsRootDescriptorTable(0, tex);
+			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
+			cmdList->SetGraphicsRootConstantBufferView(3, matCBAdress);
 
 
 			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
@@ -496,24 +502,28 @@ namespace Humpback
 		{
 			vertices[k].position = box.vertices[i].Position;
 			vertices[k].normal = box.vertices[i].Normal;
+			vertices[k].uv = box.vertices[i].TexC;
 		}
 
 		for (size_t i = 0; i < grid.vertices.size(); ++i, ++k)
 		{
 			vertices[k].position = grid.vertices[i].Position;
 			vertices[k].normal = grid.vertices[i].Normal;
+			vertices[k].uv = grid.vertices[i].TexC;
 		}
 
 		for (size_t i = 0; i < sphere.vertices.size(); ++i, ++k)
 		{
 			vertices[k].position = sphere.vertices[i].Position;
 			vertices[k].normal = sphere.vertices[i].Normal;
+			vertices[k].uv = sphere.vertices[i].TexC;
 		}
 
 		for (size_t i = 0; i < cylinder.vertices.size(); ++i, ++k)
 		{
 			vertices[k].position = cylinder.vertices[i].Position;
 			vertices[k].normal = cylinder.vertices[i].Normal;
+			vertices[k].uv = cylinder.vertices[i].TexC;
 		}
 
 		std::vector<std::uint16_t> indices;
@@ -720,18 +730,20 @@ namespace Humpback
 
 	void Renderer::_createRootSignature()
 	{
-		CD3DX12_ROOT_PARAMETER slotRootParameter[3];
+		CD3DX12_DESCRIPTOR_RANGE texTable;
+		texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
-		// Create root CBVs
-		slotRootParameter[0].InitAsConstantBufferView(0);
-		slotRootParameter[1].InitAsConstantBufferView(1);
-		slotRootParameter[2].InitAsConstantBufferView(2);
+		CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
+		slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+		slotRootParameter[1].InitAsConstantBufferView(0);
+		slotRootParameter[2].InitAsConstantBufferView(1);
+		slotRootParameter[3].InitAsConstantBufferView(2);
 
-		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, slotRootParameter, 0, 
-			nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		auto staticSamplers = D3DUtil::GetCommonStaticSamplers();
 
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, staticSamplers.size(),
+			staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> serializedRootSig = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -770,6 +782,7 @@ namespace Humpback
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		};
 	}
 
@@ -954,9 +967,69 @@ namespace Humpback
 		m_materials["mat_skull"] = std::move(skullMat);
 	}
 
+	void Renderer::_loadTextures()
+	{
+		auto bricksTex = std::make_unique<Texture>();
+		bricksTex->name = "tex_bricks";
+		bricksTex->filePath = L"Textures/bricks.dds";
+		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
+			bricksTex->filePath.c_str(), bricksTex->resource, bricksTex->uploadHeap));
+
+		auto stoneTex = std::make_unique<Texture>();
+		stoneTex->name = "tex_stone";
+		stoneTex->filePath = L"Textures/stone.dds";
+		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
+			stoneTex->filePath.c_str(), stoneTex->resource, stoneTex->uploadHeap));
+
+		auto tileTex = std::make_unique<Texture>();
+		tileTex->name = "tex_tile";
+		tileTex->filePath = L"Textures/tile.dds";
+		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
+			tileTex->filePath.c_str(), tileTex->resource, tileTex->uploadHeap));
+
+		m_textures[bricksTex->name] = std::move(bricksTex);
+		m_textures[stoneTex->name] = std::move(stoneTex);
+		m_textures[tileTex->name] = std::move(tileTex);
+	}
+
+	void Renderer::_createDescriptorHeaps()
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc;
+		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srvHeapDesc.NumDescriptors = 3;
+		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+
+		auto bricksTex = m_textures["tex_bricks"]->resource;
+		auto stoneTex = m_textures["tex_stone"]->resource;
+		auto tileTex = m_textures["tex_tile"]->resource;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = bricksTex->GetDesc().Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = bricksTex->GetDesc().MipLevels;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		m_device->CreateShaderResourceView(bricksTex.Get(), &srvDesc, srvDescHandle);
+
+		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+
+		srvDesc.Format = stoneTex->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = stoneTex->GetDesc().MipLevels;
+		m_device->CreateShaderResourceView(stoneTex.Get(), &srvDesc, srvDescHandle);
+
+		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+
+		srvDesc.Format = tileTex->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = tileTex->GetDesc().MipLevels;
+		m_device->CreateShaderResourceView(tileTex.Get(), &srvDesc, srvDescHandle);
+	}
+
 	void Renderer::_createFrameResources()
 	{
-
 		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
 		{
 			m_frameResources.push_back(

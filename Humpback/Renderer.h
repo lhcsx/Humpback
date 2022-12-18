@@ -12,6 +12,7 @@
 #include "UploadBufferHelper.h"
 #include "HMathHelper.h"
 #include "RenderableObject.h"
+#include "Texture.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -69,6 +70,9 @@ namespace Humpback
 		void _createFrameResources();
 		void _createRenderableObjects();
 		void _createMaterialsData();
+		
+		void _loadTextures();
+		void _createDescriptorHeaps();
 
 		void _updateTheViewport();
 
@@ -146,6 +150,7 @@ namespace Humpback
 		
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
+		std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
 
 		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
 		std::vector<RenderableObject*> m_renderLayers[(int)RenderLayer::Count];
