@@ -206,6 +206,10 @@ namespace Humpback
 		auto dsView = _getCurrentDSBufferView();
 		m_commandList->OMSetRenderTargets(1, &backbufferView, true, &dsView);
 
+		
+		ID3D12DescriptorHeap* srvHeaps[] = {m_srvHeap.Get()};
+		m_commandList->SetDescriptorHeaps(_countof(srvHeaps), srvHeaps);
+
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
 		// Bind per-pass constant buffer.
@@ -956,7 +960,7 @@ namespace Humpback
 		auto skullMat = std::make_unique<Material>();
 		skullMat->name = "mat_skull";
 		skullMat->matCBIdx = 3;
-		skullMat->diffuseSrvHeapIndex = 3;
+		skullMat->diffuseSrvHeapIndex = 2;
 		skullMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
 		skullMat->roughness = 0.3f;
@@ -994,7 +998,7 @@ namespace Humpback
 
 	void Renderer::_createDescriptorHeaps()
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc;
+		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srvHeapDesc.NumDescriptors = 3;
