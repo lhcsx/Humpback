@@ -77,6 +77,7 @@ VertexOut VSMain(VertexIn vin)
     vout.posH = mul(posW, gViewProj);
 
     vout.normal = mul(vin.normal, (float3x3)gWorld);
+    vout.uv = vin.uv;
 
     return vout;
 }
@@ -88,7 +89,11 @@ float4 PSMain(VertexOut pin) : SV_Target
 
     float3 eyeDir = normalize(gEyePosW - pin.posW);
 
-    float3 ambient = gAmbientLight.rgb * albedo.rgb;
+    float4 diffuse = gDiffuseMap.Sample(samLinearWrap, pin.uv) * albedo;
+    
+    
+    float3 ambient = gAmbientLight.rgb + diffuse.rgb;
+
     
     float shiniess = 1.0f - roughness;
     Material mat = { albedo, fresnelR0, shiniess };
@@ -96,7 +101,7 @@ float4 PSMain(VertexOut pin) : SV_Target
     float3 directLight = ComputeLighting(lights, mat, pin.posW, pin.normal, eyeDir, shadowFactor);
     
     float3 l = directLight + ambient;
-    result = float4(l, albedo.a);
+    result = float4(l * 0.9, albedo.a);
 
 
     return result;

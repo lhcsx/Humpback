@@ -18,7 +18,7 @@ namespace Humpback
 {
 	struct ObjectConstants
 	{
-		DirectX::XMFLOAT4X4 WorldM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 worldM = HMathHelper::Identity4x4();
 	};
 
 

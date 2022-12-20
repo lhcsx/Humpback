@@ -123,7 +123,7 @@ namespace Humpback
 				XMMATRIX worldM = XMLoadFloat4x4(&(obj->worldM));
 
 				ObjectConstants objConstants;
-				XMStoreFloat4x4(&(objConstants.WorldM), XMMatrixTranspose(worldM));
+				XMStoreFloat4x4(&(objConstants.worldM), XMMatrixTranspose(worldM));
 
 				curObjCBuffer->CopyData(obj->cbIndex, objConstants);
 
