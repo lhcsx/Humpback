@@ -20,15 +20,7 @@ cbuffer cbPerObject : register(b0)
     float4x4 gWorld;
 };
 
-cbuffer matConstants : register(b1)
-{
-    float4 albedo;
-    float3 fresnelR0;
-    float roughness;
-    float4x4 matTransform;
-}
-
-cbuffer cbPass : register(b2)
+cbuffer cbPass : register(b1)
 {
     float4x4 gView;
     float4x4 gInvView;
@@ -48,6 +40,16 @@ cbuffer cbPass : register(b2)
     
     Light lights[MaxLights];
 };
+
+cbuffer matConstants : register(b2)
+{
+    float4 albedo;
+    float3 fresnelR0;
+    float roughness;
+    float4x4 matTransform;
+}
+
+
 
 struct VertexIn
 {

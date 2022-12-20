@@ -144,9 +144,9 @@ namespace Humpback
 		float								m_phi = DirectX::XM_PIDIV4;
 		float								m_radius = 5.0f;
 
-		DirectX::XMFLOAT4X4					m_viewMatrix;
-		DirectX::XMFLOAT4X4					m_projectionMatrix;
-		DirectX::XMFLOAT3					m_cameraPos;
+		DirectX::XMFLOAT4X4					m_viewMatrix = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4					m_projectionMatrix = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT3					m_cameraPos = {0.0f, 0.0f, 0.0f};
 		
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;

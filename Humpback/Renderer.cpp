@@ -962,7 +962,7 @@ namespace Humpback
 		skullMat->matCBIdx = 3;
 		skullMat->diffuseSrvHeapIndex = 2;
 		skullMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05);
+		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
 		skullMat->roughness = 0.3f;
 
 		m_materials["mat_bricks"] = std::move(bricksMat);
