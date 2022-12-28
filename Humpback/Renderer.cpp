@@ -47,6 +47,7 @@ namespace Humpback
 
 		_initD3D12();
 
+		_createCamera();
 		OnResize();
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
@@ -92,18 +93,10 @@ namespace Humpback
 	void Renderer::_updateCamera()
 	{
 		// Convert Spherical to Cartesian coordinates.
-		m_cameraPos.x = m_radius * sinf(m_phi) * cosf(m_theta);
-		m_cameraPos.z = m_radius * sinf(m_phi) * sinf(m_theta);
-		m_cameraPos.y = m_radius * cosf(m_phi);
+		m_mainCamera->SetPosition(m_radius * sinf(m_phi) * cosf(m_theta),
+			m_radius * sinf(m_phi) * sinf(m_theta), m_radius * cosf(m_phi));
 
-		// Build the view matrix.
-		XMVECTOR cameraPos = XMVectorSet(m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, 1.0f);
-		XMVECTOR cameraTarget = XMVectorZero();
-		XMVECTOR cameraUp = XMVectorSet(.0f, 1.0f, 0.0f, 0.0f);
-
-
-		XMMATRIX view = XMMatrixLookAtLH(cameraPos, cameraTarget, cameraUp);
-		XMStoreFloat4x4(&m_viewMatrix, view);
+		m_mainCamera->UpdateViewMatrix(XMVectorZero());
 	}
 
 	void Renderer::_updateCBuffers()
@@ -134,8 +127,8 @@ namespace Humpback
 
 	void Renderer::_updateCBufferPerPass()
 	{
-		XMMATRIX viewM = XMLoadFloat4x4(&m_viewMatrix);
-		XMMATRIX projM = XMLoadFloat4x4(&m_projectionMatrix);
+		XMMATRIX viewM = m_mainCamera->GetViewMatrix();
+		XMMATRIX projM = m_mainCamera->GetProjectionMatrix();
 
 		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
 
@@ -144,7 +137,7 @@ namespace Humpback
 		XMStoreFloat4x4(&m_cbufferPerPass.viewProjM, XMMatrixTranspose(viewProjM));
 		m_cbufferPerPass.nearZ = m_near;
 		m_cbufferPerPass.farZ = m_far;
-		m_cbufferPerPass.cameraPosW = m_cameraPos;
+		m_cbufferPerPass.cameraPosW = m_mainCamera->GetPosition();
 		m_cbufferPerPass.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
 		m_cbufferPerPass.lights[0].direction = { 0.57735f, -0.57735f, 0.57735f };
 		m_cbufferPerPass.lights[0].strength = { 0.6f, 0.6f, 0.6f };
@@ -353,8 +346,7 @@ namespace Humpback
 
 		_updateTheViewport();
 
-		XMMATRIX p = XMMatrixPerspectiveFovLH(0.25f * HMathHelper::PI, m_aspectRatio, m_near, m_far);
-		XMStoreFloat4x4(&m_projectionMatrix, p);
+		m_mainCamera->UpdateProjectionMatrix(0.25 * HMathHelper::PI, m_aspectRatio, m_near, m_far);
 	}
 
 
@@ -435,6 +427,11 @@ namespace Humpback
 	{
 		m_timer = std::make_unique<Timer>();
 		m_timer->Reset();
+	}
+
+	void Renderer::_createCamera()
+	{
+		m_mainCamera = std::make_unique<Camera>(m_near, m_far);
 	}
 
 	void Renderer::_createSceneGeometry()

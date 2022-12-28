@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 
+#include "Camera.h"
 #include "Mesh.h"
 #include "FrameResource.h"
 #include "Timer.h"
@@ -60,6 +61,7 @@ namespace Humpback
 		void _waitForPreviousFrame();
 		void _initTimer();
 
+		void _createCamera();
 		void _createSceneGeometry();
 		void _createSimpleGeometry();
 		void _loadGeometryFromFile();
@@ -136,7 +138,7 @@ namespace Humpback
 		CD3DX12_VIEWPORT					m_viewPort;
 		CD3DX12_RECT						m_scissorRect;
 		unsigned int						m_rtvDescriptorSize = 0;
-		POINT								m_lastMousePoint;
+		POINT								m_lastMousePoint = {0, 0};
 		unsigned int						m_cbvSrvUavDescriptorSize = 0;
 		unsigned int						m_passCbvOffset = 0;
 		
@@ -144,10 +146,8 @@ namespace Humpback
 		float								m_phi = DirectX::XM_PIDIV4;
 		float								m_radius = 5.0f;
 
-		DirectX::XMFLOAT4X4					m_viewMatrix = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4					m_projectionMatrix = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT3					m_cameraPos = {0.0f, 0.0f, 0.0f};
-		
+		std::unique_ptr<Camera>				m_mainCamera = nullptr;
+
 		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
 		std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
