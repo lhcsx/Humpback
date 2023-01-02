@@ -12,6 +12,27 @@ namespace Humpback
 	{
 	}
 
+	void Camera::Pitch(float radians)
+	{
+		XMMATRIX m = XMMatrixRotationAxis(XMLoadFloat3(&m_right), radians);
+		
+		XMStoreFloat3(&m_forward, XMVector3TransformNormal(XMLoadFloat3(&m_forward), m));
+		XMStoreFloat3(&m_up, XMVector3TransformNormal(XMLoadFloat3(&m_up), m));
+
+		m_viewDirty = true;
+	}
+
+	void Camera::RotateY(float radians)
+	{
+		XMMATRIX m = XMMatrixRotationY(radians);
+
+		XMStoreFloat3(&m_forward, XMVector3TransformNormal(XMLoadFloat3(&m_forward), m));
+		XMStoreFloat3(&m_right, XMVector3TransformNormal(XMLoadFloat3(&m_right), m));
+		XMStoreFloat3(&m_up, XMVector3TransformNormal(XMLoadFloat3(&m_up), m));
+
+		m_viewDirty = true;
+	}
+
 	XMFLOAT3 Camera::GetPosition()
 	{
 		return m_position;

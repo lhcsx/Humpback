@@ -19,6 +19,8 @@ namespace Humpback
 		Camera& operator= (const Camera&) = delete;
 		~Camera() = default;
 
+		void Pitch(float radians);
+		void RotateY(float radians);
 
 		DirectX::XMFLOAT3 GetPosition();
 		DirectX::XMFLOAT3 GetForward();

@@ -410,24 +410,14 @@ namespace Humpback
 
 	void Renderer::OnMouseMove(WPARAM btnState, int x, int y)
 	{
-		if ((btnState & MK_LBUTTON) != 0)
+		if((btnState & MK_RBUTTON) != 0)
 		{
+			// Make each pixel correspond to a quarter of a degree.
 			float dx = XMConvertToRadians(0.25f * static_cast<float>(x - m_lastMousePoint.x));
 			float dy = XMConvertToRadians(0.25f * static_cast<float>(y - m_lastMousePoint.y));
 
-			m_theta += dx;
-			m_phi += dy;
-
-			m_phi = HMathHelper::Clamp(m_phi, 0.1f, HMathHelper::PI - 0.1f);
-		}
-		else if((btnState & MK_RBUTTON) != 0)
-		{
-			float dx = 0.005f * static_cast<float>(x - m_lastMousePoint.x);
-			float dy = 0.005f * static_cast<float>(y - m_lastMousePoint.y);
-
-			m_radius += dx - dy;
-
-			m_radius = HMathHelper::Clamp(m_radius, 3.0f, 15.0f);
+			m_mainCamera->Pitch(dy);
+			m_mainCamera->RotateY(dx);
 		}
 
 		m_lastMousePoint.x = x;
