@@ -80,6 +80,7 @@ namespace Humpback
 
 		void _update();			// Update per frame.
 		void _updateCamera();
+		void _onKeyboardInput();
 
 		void _render();			// Render per frame.
 		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);

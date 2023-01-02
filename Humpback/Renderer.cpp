@@ -72,6 +72,8 @@ namespace Humpback
 
 	void Renderer::_update()
 	{
+		_onKeyboardInput();
+
 		_updateCamera();
 
 		m_curFrameResourceIdx = (m_curFrameResourceIdx + 1) % FRAME_RESOURCE_COUNT;
@@ -92,11 +94,40 @@ namespace Humpback
 
 	void Renderer::_updateCamera()
 	{
-		// Convert Spherical to Cartesian coordinates.
-		m_mainCamera->SetPosition(m_radius * sinf(m_phi) * cosf(m_theta),
-			m_radius * sinf(m_phi) * sinf(m_theta), m_radius * cosf(m_phi));
+		m_mainCamera->Update();
+	}
 
-		m_mainCamera->UpdateViewMatrix(XMVectorZero());
+	void Renderer::_onKeyboardInput()
+	{
+		float deltaT = m_timer->DeltaTime();
+
+		if (GetAsyncKeyState('W') & 0x8000)
+		{	
+			auto pos =  XMLoadFloat3(&m_mainCamera->GetPosition());
+			auto newPos = pos + (m_mainCamera->GetForwardVector() * 10.f * deltaT);
+			m_mainCamera->SetPosition(newPos);
+		}
+
+		if (GetAsyncKeyState('A') & 0x8000)
+		{
+			auto pos = XMLoadFloat3(&m_mainCamera->GetPosition());
+			auto newPos = pos + (m_mainCamera->GetRightVector() * -10.f * deltaT);
+			m_mainCamera->SetPosition(newPos);
+		}
+
+		if (GetAsyncKeyState('S') & 0x8000)
+		{
+			auto pos = XMLoadFloat3(&m_mainCamera->GetPosition());
+			auto newPos = pos + (m_mainCamera->GetForwardVector() * -10.f * deltaT);
+			m_mainCamera->SetPosition(newPos);
+		}
+
+		if (GetAsyncKeyState('D') & 0x8000)
+		{
+			auto pos = XMLoadFloat3(&m_mainCamera->GetPosition());
+			auto newPos = pos + (m_mainCamera->GetRightVector() * 10.f * deltaT);
+			m_mainCamera->SetPosition(newPos);
+		}
 	}
 
 	void Renderer::_updateCBuffers()
@@ -321,7 +352,7 @@ namespace Humpback
 		D3D12_CLEAR_VALUE fbClear;
 		fbClear.Format = m_dsFormat;
 		fbClear.DepthStencil.Depth = 1.0f;
-		fbClear.DepthStencil.Stencil = .0f;
+		fbClear.DepthStencil.Stencil = 0;
 		auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		ThrowIfFailed(m_device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
 			&dsDesc, D3D12_RESOURCE_STATE_COMMON, &fbClear, IID_PPV_ARGS(&m_depthStencilBuffer)));
@@ -346,7 +377,7 @@ namespace Humpback
 
 		_updateTheViewport();
 
-		m_mainCamera->UpdateProjectionMatrix(0.25 * HMathHelper::PI, m_aspectRatio, m_near, m_far);
+		m_mainCamera->UpdateProjectionMatrix(0.25f * HMathHelper::PI, m_aspectRatio, m_near, m_far);
 	}
 
 
@@ -381,8 +412,8 @@ namespace Humpback
 	{
 		if ((btnState & MK_LBUTTON) != 0)
 		{
-			float dx = XMConvertToRadians(0.25 * static_cast<float>(x - m_lastMousePoint.x));
-			float dy = XMConvertToRadians(0.25 * static_cast<float>(y - m_lastMousePoint.y));
+			float dx = XMConvertToRadians(0.25f * static_cast<float>(x - m_lastMousePoint.x));
+			float dy = XMConvertToRadians(0.25f * static_cast<float>(y - m_lastMousePoint.y));
 
 			m_theta += dx;
 			m_phi += dy;
