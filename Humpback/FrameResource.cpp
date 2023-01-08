@@ -23,7 +23,7 @@ namespace Humpback
 
 		objCBuffer = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
 		passCBuffer = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
-		materialCBuffer = std::make_unique<UploadBuffer<MaterialConstants>>(device, materialCount, true);
+		materialCBuffer = std::make_unique<UploadBuffer<MaterialConstants>>(device, materialCount, false);
 	}
 
 	FrameResource::~FrameResource()

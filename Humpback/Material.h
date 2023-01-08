@@ -20,6 +20,11 @@ namespace Humpback
 		float roughness = 0.25f;
 
 		DirectX::XMFLOAT4X4 matTransform = HMathHelper::Identity4x4();
+
+		unsigned int diffuseMapIndex = 0;
+		unsigned int pad0;
+		unsigned int pad1;
+		unsigned int pad2;
 	};
 
 

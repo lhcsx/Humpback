@@ -48,6 +48,8 @@ namespace Humpback
 		_initD3D12();
 
 		_createCamera();
+		m_mainCamera->SetPosition(0.0f, 2.0f, -15.0f);
+
 		OnResize();
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
@@ -148,6 +150,7 @@ namespace Humpback
 
 				ObjectConstants objConstants;
 				XMStoreFloat4x4(&(objConstants.worldM), XMMatrixTranspose(worldM));
+				objConstants.MaterialIndex = obj->material->matCBIdx;
 
 				curObjCBuffer->CopyData(obj->cbIndex, objConstants);
 
@@ -193,6 +196,7 @@ namespace Humpback
 				matConstants.diffuseAlbedo = pMat->diffuseAlbedo;
 				matConstants.fresnelR0 = pMat->fresnelR0;
 				matConstants.roughness = pMat->roughness;
+				matConstants.diffuseMapIndex = pMat->diffuseSrvHeapIndex;
 				
 				XMMATRIX matrixMatTrans = XMLoadFloat4x4(&pMat->matTransform);
 				XMStoreFloat4x4(&matConstants.matTransform, XMMatrixTranspose(matrixMatTrans));
@@ -218,8 +222,8 @@ namespace Humpback
 		m_commandList->RSSetViewports(1, &m_viewPort);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		auto transP2R = CD3DX12_RESOURCE_BARRIER::Transition(_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		m_commandList->ResourceBarrier(1, &transP2R);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(_getCurrentBackbuffer(), 
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		// Clear depth and color buffers.
 		m_commandList->ClearRenderTargetView(_getCurrentBackBufferView(), Colors::DarkGray, 0, nullptr);
@@ -238,13 +242,17 @@ namespace Humpback
 		
 		// Bind per-pass constant buffer.
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
-		m_commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
+		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+
+		m_commandList->SetGraphicsRootDescriptorTable(3, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
-		auto rt2PreBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		m_commandList->ResourceBarrier(1, &rt2PreBarrier);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+			_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
 		ThrowIfFailed(m_commandList->Close());
 
@@ -271,9 +279,6 @@ namespace Humpback
 		auto objCB = m_curFrameResource->objCBuffer->Resource();
 		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
 
-		auto matCB = m_curFrameResource->materialCBuffer->Resource();
-		auto matCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(MaterialConstants));
-
 		for (size_t i = 0; i < objList.size(); i++)
 		{
 			auto obj = objList[i];
@@ -290,19 +295,10 @@ namespace Humpback
 
 			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
 
-			CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-			tex.Offset(obj->material->diffuseSrvHeapIndex, m_cbvSrvUavDescriptorSize);
-
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
 			objCBAddress += obj->cbIndex * objCBByteSize;
 
-			D3D12_GPU_VIRTUAL_ADDRESS matCBAdress = matCB->GetGPUVirtualAddress();
-			matCBAdress += obj->material->matCBIdx * matCBByteSize;
-
-			cmdList->SetGraphicsRootDescriptorTable(0, tex);
-			cmdList->SetGraphicsRootConstantBufferView(1, objCBAddress);
-			cmdList->SetGraphicsRootConstantBufferView(3, matCBAdress);
-
+			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
 			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
@@ -753,14 +749,14 @@ namespace Humpback
 	void Renderer::_createRootSignature()
 	{
 		CD3DX12_DESCRIPTOR_RANGE texTable;
-		texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0);
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
-		slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
-		slotRootParameter[1].InitAsConstantBufferView(0);
-		slotRootParameter[2].InitAsConstantBufferView(1);
-		slotRootParameter[3].InitAsConstantBufferView(2);
+		slotRootParameter[0].InitAsConstantBufferView(0);
+		slotRootParameter[1].InitAsConstantBufferView(1);
+		slotRootParameter[2].InitAsShaderResourceView(0, 1);
+		slotRootParameter[3].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		auto staticSamplers = D3DUtil::GetCommonStaticSamplers();
 
@@ -798,8 +794,8 @@ namespace Humpback
 		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
 		std::wstring shaderFullPath = GetAssetPath(shaderPath);
 
-		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_0");
-		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_0");
+		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_1");
+		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_1");
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},

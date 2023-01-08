@@ -5,8 +5,6 @@
 #include "Lighting.hlsl"
 
 
-Texture2D gDiffuseMap : register(t0);
-
 SamplerState samPointWrap : register(s0);
 SamplerState samPointClamp : register(s1);
 SamplerState samLinearWrap : register(s2);
@@ -15,9 +13,29 @@ SamplerState samAniWrap : register(s4);
 SamplerState samAniClamp : register(s5);
 
 
+struct MaterialData
+{
+    float4 albedo;
+    float3 fresnelR0;
+    float roughness;
+    float4x4 matTransform;
+    uint diffuseMapIndex;
+    uint pad0;
+    uint pad1;
+    uint pad2;
+};
+
+StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t0, space1);
+
+Texture2D gDiffuseMapArray[4] : register(t0);
+
 cbuffer cbPerObject : register(b0)
 {
     float4x4 gWorld;
+    uint gMatIndex;
+    uint pad0;
+    uint pad1;
+    uint pad2;
 };
 
 cbuffer cbPass : register(b1)
@@ -40,15 +58,6 @@ cbuffer cbPass : register(b1)
     
     Light lights[MaxLights];
 };
-
-cbuffer matConstants : register(b2)
-{
-    float4 albedo;
-    float3 fresnelR0;
-    float roughness;
-    float4x4 matTransform;
-}
-
 
 
 struct VertexIn
@@ -86,23 +95,22 @@ float4 PSMain(VertexOut pin) : SV_Target
 {
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
-
-    float3 eyeDir = normalize(gEyePosW - pin.posW);
-
-    float4 diffuse = gDiffuseMap.Sample(samLinearWrap, pin.uv) * albedo;
     
+    MaterialData matData = gMaterialDataBuffer[gMatIndex];
+    
+    float3 eyeDir = normalize(gEyePosW - pin.posW);
+    
+    float4 diffuse = gDiffuseMapArray[matData.diffuseMapIndex].Sample(samLinearWrap, pin.uv) * matData.albedo;
     
     float3 ambient = gAmbientLight.rgb + diffuse.rgb;
-
     
-    float shiniess = 1.0f - roughness;
-    Material mat = { albedo, fresnelR0, shiniess };
+    float shiniess = 1.0f - matData.roughness;
+    Material mat = { matData.albedo, matData.fresnelR0, shiniess };
     float3 shadowFactor = 1.0f;
     float3 directLight = ComputeLighting(lights, mat, pin.posW, pin.normal, eyeDir, shadowFactor);
     
     float3 l = directLight + ambient;
-    result = float4(l * 0.9, albedo.a);
-
+    result = float4(l * 0.9, matData.albedo.a);
 
     return result;
 }

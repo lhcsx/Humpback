@@ -19,6 +19,10 @@ namespace Humpback
 	struct ObjectConstants
 	{
 		DirectX::XMFLOAT4X4 worldM = HMathHelper::Identity4x4();
+		unsigned int MaterialIndex;
+		unsigned int pat0;
+		unsigned int pat1;
+		unsigned int pat2;
 	};
 
 
