@@ -16,6 +16,8 @@
 
 namespace Humpback
 {
+	struct InstanceData;
+
 	struct ObjectConstants
 	{
 		DirectX::XMFLOAT4X4 worldM = HMathHelper::Identity4x4();
@@ -48,12 +50,12 @@ namespace Humpback
 		Light lights[MaxLights];
 	};
 
-
 	class FrameResource
 	{
 	public:
 
-		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, unsigned int materialCount);
+		FrameResource(ID3D12Device* device, unsigned int passCount, unsigned int objectCount, 
+			unsigned int maxInstanceCount, unsigned int materialCount);
 		FrameResource(const FrameResource& rhs) = delete;
 		FrameResource& operator=(const FrameResource& rhs) = delete;
 		~FrameResource();
@@ -64,6 +66,8 @@ namespace Humpback
 		std::unique_ptr<UploadBuffer<ObjectConstants>> objCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<PassConstants>> passCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<MaterialConstants>> materialCBuffer = nullptr;
+
+		std::unique_ptr<UploadBuffer<InstanceData>> instanceBuffer = nullptr;
 
 		unsigned int fence = 0;
 	};

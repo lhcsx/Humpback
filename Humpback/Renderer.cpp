@@ -134,7 +134,8 @@ namespace Humpback
 
 	void Renderer::_updateCBuffers()
 	{
-		_updateCBufferPerObject();
+		//_updateCBufferPerObject();
+		_updateInstanceData();
 		_updateMatCBuffer();
 		_updateCBufferPerPass();
 	}
@@ -206,6 +207,11 @@ namespace Humpback
 				--pMat->numFramesDirty;
 			}
 		}
+	}
+
+	void Renderer::_updateInstanceData()
+	{
+		// TODO
 	}
 
 	void Renderer::_render()
@@ -753,9 +759,9 @@ namespace Humpback
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
-		slotRootParameter[0].InitAsConstantBufferView(0);
-		slotRootParameter[1].InitAsConstantBufferView(1);
-		slotRootParameter[2].InitAsShaderResourceView(0, 1);
+		slotRootParameter[0].InitAsShaderResourceView(0, 1);
+		slotRootParameter[1].InitAsShaderResourceView(1, 1);
+		slotRootParameter[2].InitAsConstantBufferView(0);
 		slotRootParameter[3].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		auto staticSamplers = D3DUtil::GetCommonStaticSamplers();
@@ -849,7 +855,7 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		auto boxGO = std::make_unique<RenderableObject>();
+		/*auto boxGO = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 		boxGO->cbIndex = 0;
@@ -869,7 +875,7 @@ namespace Humpback
 		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
 		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
 		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		m_renderableList.push_back(std::move(gridRitem));
+		m_renderableList.push_back(std::move(gridRitem));*/
 
 		auto skullRitem = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
@@ -877,67 +883,44 @@ namespace Humpback
 		skullRitem->cbIndex = 2;
 		skullRitem->material = m_materials["mat_skull"].get();
 		skullRitem->mesh = m_meshes["skullGeo"].get();
+		skullRitem->instanceCount = 0;
 		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
 		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
 		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
-		m_renderableList.push_back(std::move(skullRitem));
 
-		XMMATRIX brickTexTransform = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-		UINT objCBIndex = 3;
-		for (int i = 0; i < 5; ++i)
+		int n = 5;
+		m_instanceCount = n * n * n;
+		skullRitem->instances.resize(m_instanceCount);
+		
+		float width = 200.0f;
+		float height = 200.0f;
+		float depth = 200.0f;
+
+		float x = -0.5f * width;
+		float y = -0.5f * height;
+		float z = -0.5f * depth;
+		float dx = width / (n - 1);
+		float dy = height / (n - 1);
+		float dz = depth / (n - 1);
+
+		for (size_t i = 0; i < n; i++)
 		{
-			auto leftCylRitem = std::make_unique<RenderableObject>();
-			auto rightCylRitem = std::make_unique<RenderableObject>();
-			auto leftSphereRitem = std::make_unique<RenderableObject>();
-			auto rightSphereRitem = std::make_unique<RenderableObject>();
-
-			XMMATRIX leftCylWorld = XMMatrixTranslation(-5.0f, 1.5f, -10.0f + i * 5.0f);
-			XMMATRIX rightCylWorld = XMMatrixTranslation(+5.0f, 1.5f, -10.0f + i * 5.0f);
-
-			XMMATRIX leftSphereWorld = XMMatrixTranslation(-5.0f, 3.5f, -10.0f + i * 5.0f);
-			XMMATRIX rightSphereWorld = XMMatrixTranslation(+5.0f, 3.5f, -10.0f + i * 5.0f);
-
-			XMStoreFloat4x4(&leftCylRitem->worldM, rightCylWorld);
-			XMStoreFloat4x4(&leftCylRitem->texTrans, brickTexTransform);
-			leftCylRitem->cbIndex = objCBIndex++;
-			leftCylRitem->material = m_materials["mat_bricks"].get();
-			leftCylRitem->mesh = m_meshes["shapeGeo"].get();
-			leftCylRitem->indexCount = leftCylRitem->mesh->drawArgs["cylinder"].indexCount;
-			leftCylRitem->startIndexLocation = leftCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-			leftCylRitem->baseVertexLocation = leftCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
-
-			XMStoreFloat4x4(&rightCylRitem->worldM, leftCylWorld);
-			XMStoreFloat4x4(&rightCylRitem->texTrans, brickTexTransform);
-			rightCylRitem->cbIndex = objCBIndex++;
-			rightCylRitem->material = m_materials["mat_bricks"].get();
-			rightCylRitem->mesh = m_meshes["shapeGeo"].get();
-			rightCylRitem->indexCount = rightCylRitem->mesh->drawArgs["cylinder"].indexCount;
-			rightCylRitem->startIndexLocation = rightCylRitem->mesh->drawArgs["cylinder"].startIndexLocation;
-			rightCylRitem->baseVertexLocation = rightCylRitem->mesh->drawArgs["cylinder"].baseVertexLocation;
-
-			XMStoreFloat4x4(&leftSphereRitem->worldM, leftSphereWorld);
-			leftSphereRitem->texTrans = HMathHelper::Identity4x4();
-			leftSphereRitem->cbIndex = objCBIndex++;
-			leftSphereRitem->material = m_materials["mat_stone"].get();
-			leftSphereRitem->mesh = m_meshes["shapeGeo"].get();
-			leftSphereRitem->indexCount = leftSphereRitem->mesh->drawArgs["sphere"].indexCount;
-			leftSphereRitem->startIndexLocation = leftSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-			leftSphereRitem->baseVertexLocation = leftSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
-
-			XMStoreFloat4x4(&rightSphereRitem->worldM, rightSphereWorld);
-			rightSphereRitem->texTrans = HMathHelper::Identity4x4();
-			rightSphereRitem->cbIndex = objCBIndex++;
-			rightSphereRitem->material = m_materials["mat_stone"].get();
-			rightSphereRitem->mesh = m_meshes["shapeGeo"].get();
-			rightSphereRitem->indexCount = rightSphereRitem->mesh->drawArgs["sphere"].indexCount;
-			rightSphereRitem->startIndexLocation = rightSphereRitem->mesh->drawArgs["sphere"].startIndexLocation;
-			rightSphereRitem->baseVertexLocation = rightSphereRitem->mesh->drawArgs["sphere"].baseVertexLocation;
-
-			m_renderableList.push_back(std::move(leftCylRitem));
-			m_renderableList.push_back(std::move(rightCylRitem));
-			m_renderableList.push_back(std::move(leftSphereRitem));
-			m_renderableList.push_back(std::move(rightSphereRitem));
+			for (size_t j = 0; j < n; j++)
+			{
+				for (size_t k = 0; k < n; k++)
+				{
+					int index = i * n * n + j * n + k;
+					skullRitem->instances[index].worldMatrix = XMFLOAT4X4(
+						1.0f, 0.0f, 0.0f, 0.0f,
+						0.0f, 1.0f, 0.0f, 0.0f,
+						0.0f, 0.0f, 1.0f, 0.0f,
+						x + k * dx, y + j * dy, z + i * dz, 1.0f);
+					skullRitem->instances[index].materialIndex = 3;
+				}
+			}
 		}
+
+		m_renderableList.push_back(std::move(skullRitem));
 
 		for (auto& e : m_renderableList)
 		{
@@ -1052,7 +1035,7 @@ namespace Humpback
 		{
 			m_frameResources.push_back(
 				std::make_unique<FrameResource>(m_device.Get(), 1, 
-					m_renderableList.size(), m_materials.size()));
+					m_renderableList.size(), m_instanceCount, m_materials.size()));
 		}
 	}
 

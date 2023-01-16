@@ -89,6 +89,7 @@ namespace Humpback
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
 		void _updateMatCBuffer();
+		void _updateInstanceData();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -158,5 +159,6 @@ namespace Humpback
 
 		PassConstants						m_cbufferPerPass;
 
+		unsigned int m_instanceCount = 0;
 	};
 }

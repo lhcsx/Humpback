@@ -20,6 +20,15 @@ namespace Humpback
 
 	extern const int FRAME_RESOURCE_COUNT;
 
+	struct InstanceData
+	{
+		DirectX::XMFLOAT4X4 worldMatrix = HMathHelper::Identity4x4();
+		unsigned int materialIndex = 0;
+		unsigned int pad0 = 0;
+		unsigned int pad1 = 0;
+		unsigned int pad2 = 0;
+	};
+
 	class RenderableObject
 	{
 	public:
@@ -37,8 +46,11 @@ namespace Humpback
 
 		D3D12_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
+		std::vector<InstanceData> instances;
+
 		unsigned int cbIndex = 0;
 
+		unsigned int instanceCount = 0;
 		unsigned int indexCount = 0;
 		unsigned int startIndexLocation = 0;
 		unsigned int baseVertexLocation = 0;
