@@ -211,7 +211,22 @@ namespace Humpback
 
 	void Renderer::_updateInstanceData()
 	{
-		// TODO
+		auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
+
+		for (auto& e: m_renderableList)
+		{
+			const auto& instanceData = e->instances;
+
+			for (size_t i = 0; i < instanceData.size(); i++)
+			{
+				XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
+				InstanceData data;
+				XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
+				data.materialIndex = instanceData[i].materialIndex;
+
+				currentInstanceBuffer->CopyData(i, data);
+			}
+		}
 	}
 
 	void Renderer::_render()
@@ -248,10 +263,10 @@ namespace Humpback
 		
 		// Bind per-pass constant buffer.
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
-		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
 		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
-		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootShaderResourceView(1, matBuffer->GetGPUVirtualAddress());
 
 		m_commandList->SetGraphicsRootDescriptorTable(3, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
@@ -282,8 +297,10 @@ namespace Humpback
 			ThrowInvalidParameterException();
 		}
 
-		auto objCB = m_curFrameResource->objCBuffer->Resource();
-		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
+		//auto objCB = m_curFrameResource->objCBuffer->Resource();
+		//auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
+
+
 
 		for (size_t i = 0; i < objList.size(); i++)
 		{
@@ -301,12 +318,16 @@ namespace Humpback
 
 			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
 
-			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
-			objCBAddress += obj->cbIndex * objCBByteSize;
+			cmdList->SetGraphicsRootShaderResourceView(0, 
+				m_curFrameResource->instanceBuffer->Resource()->GetGPUVirtualAddress());
 
-			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
-			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
+		/*	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+			objCBAddress += obj->cbIndex * objCBByteSize;*/
+
+			//cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+
+			cmdList->DrawIndexedInstanced(obj->indexCount, obj->instances.size(), obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
 	}
 

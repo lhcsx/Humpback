@@ -25,20 +25,30 @@ struct MaterialData
     uint pad2;
 };
 
-StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t0, space1);
-
-Texture2D gDiffuseMapArray[4] : register(t0);
-
-cbuffer cbPerObject : register(b0)
+struct InstanceData
 {
-    float4x4 gWorld;
-    uint gMatIndex;
+    float4x4 world;
+    uint materialIndex;
     uint pad0;
     uint pad1;
     uint pad2;
 };
 
-cbuffer cbPass : register(b1)
+StructuredBuffer<InstanceData> gInstanceBuffer : register(t0, space1);
+StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t1, space1);
+
+Texture2D gDiffuseMapArray[4] : register(t0);
+
+//cbuffer cbPerObject : register(b0)
+//{
+//    float4x4 gWorld;
+//    uint gMatIndex;
+//    uint pad0;
+//    uint pad1;
+//    uint pad2;
+//};
+
+cbuffer cbPass : register(b0)
 {
     float4x4 gView;
     float4x4 gInvView;
@@ -73,20 +83,26 @@ struct VertexOut
     float3 posW : POSITION;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
+    
+    nointerpolation uint matIdx : MATINDEX;
 };
 
-VertexOut VSMain(VertexIn vin)
+VertexOut VSMain(VertexIn vin, uint instanceID : SV_InstanceID)
 {
     VertexOut vout;
-
+    
+    InstanceData insData = gInstanceBuffer[instanceID];
+    
     // Transform to homogeneous clip space.
-    float4 posW = mul(float4(vin.posL, 1.0f), gWorld);
+    float4 posW = mul(float4(vin.posL, 1.0f), insData.world);
     vout.posW = posW.xyz;
 
     vout.posH = mul(posW, gViewProj);
 
-    vout.normal = mul(vin.normal, (float3x3)gWorld);
+    vout.normal = mul(vin.normal, (float3x3)insData.world);
     vout.uv = vin.uv;
+    
+    vout.matIdx = insData.materialIndex;
 
     return vout;
 }
@@ -96,7 +112,7 @@ float4 PSMain(VertexOut pin) : SV_Target
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
     
-    MaterialData matData = gMaterialDataBuffer[gMatIndex];
+    MaterialData matData = gMaterialDataBuffer[pin.matIdx];
     
     float3 eyeDir = normalize(gEyePosW - pin.posW);
     

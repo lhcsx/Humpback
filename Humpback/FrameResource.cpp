@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "FrameResource.h"
+#include "RenderableObject.h"
 
 
 namespace Humpback
