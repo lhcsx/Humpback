@@ -10,6 +10,7 @@
 #include <dxgi1_5.h>
 #include <d3dcompiler.h>
 #include <d3d12.h>
+#include <DirectXCollision.h>
 
 
 namespace Humpback 
@@ -21,6 +22,8 @@ namespace Humpback
 		unsigned int indexCount;
 		unsigned int startIndexLocation;
 		int baseVertexLocation;
+
+		DirectX::BoundingBox aabb;
 	};
 
 	class Mesh

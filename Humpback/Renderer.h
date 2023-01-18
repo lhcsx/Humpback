@@ -129,8 +129,6 @@ namespace Humpback
 		unsigned int						m_width;
 		unsigned int						m_height;
 		float								m_aspectRatio;
-		float								m_near = 1.0f;
-		float								m_far = 1000.0f;
 		bool								m_4xMsaaState = false;
 		int									m_4xMsaaQuality = 0;
 

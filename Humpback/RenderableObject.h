@@ -7,6 +7,7 @@
 
 #include <d3d12.h>
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
 
 #include "HMathHelper.h"
 #include "Mesh.h"
@@ -43,6 +44,8 @@ namespace Humpback
 
 		Mesh* mesh = nullptr;
 		Material* material = nullptr;
+		
+		DirectX::BoundingBox aabb;
 
 		D3D12_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

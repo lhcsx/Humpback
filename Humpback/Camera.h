@@ -14,7 +14,7 @@ namespace Humpback
 	{
 	public:
 
-		Camera(float near, float far);
+		Camera();
 		Camera(const Camera&) = delete;
 		Camera& operator= (const Camera&) = delete;
 		~Camera() = default;
@@ -36,16 +36,24 @@ namespace Humpback
 		void SetForward(float x, float y, float z);
 		void SetRight(DirectX::XMVECTOR right);
 
+		void SetFrustum(float fovY, float aspect, float near, float far);
+
+		float GetNearZ();
+		float GetFarZ();
+
 		void Update();
 		void UpdateViewMatrix();
-		void UpdateProjectionMatrix(float fov, float aspectRatio, float near, float far);
 
 
 	private:
+		void _updateProjectionMatrix();
+		
 		bool m_viewDirty = false;
 
-		float m_near = 0;
-		float m_far = 0;
+		float m_near = 0.0f;
+		float m_far = 0.0f;
+		float m_fovY = 0.0f;
+		float m_aspect = 0.0f;
 
 		DirectX::XMFLOAT3 m_position = { 0.0f, 0.0f, 0.0f };
 		DirectX::XMFLOAT3 m_forward = { 0.0f, 0.0f, 1.0f };

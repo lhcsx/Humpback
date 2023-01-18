@@ -7,9 +7,9 @@ using namespace DirectX;
 
 namespace Humpback 
 {
-	Camera::Camera(float near, float far):
-		m_near(near), m_far(far)
+	Camera::Camera()
 	{
+		SetFrustum(0.25f * HMathHelper::PI, 1.0f, 1.0f, 1000.0f);
 	}
 
 	void Camera::Pitch(float radians)
@@ -94,6 +94,27 @@ namespace Humpback
 		m_viewDirty = true;
 	}
 
+	void Camera::SetFrustum(float fovY, float aspect, float near, float far)
+	{
+		m_fovY = fovY;
+		m_aspect = aspect;
+		m_near = near;
+		m_far = far;
+
+		_updateProjectionMatrix();
+	}
+
+	
+	float Camera::GetNearZ()
+	{
+		return m_near;
+	}
+
+	float Camera::GetFarZ()
+	{
+		return m_far;
+	}
+
 	void Camera::Update()
 	{
 		UpdateViewMatrix();
@@ -146,9 +167,9 @@ namespace Humpback
 
 	}
 
-	void Camera::UpdateProjectionMatrix(float fov, float aspectRatio, float near, float far)
+	void Camera::_updateProjectionMatrix()
 	{
-		XMMATRIX p = XMMatrixPerspectiveFovLH(fov, aspectRatio, near, far);
+		XMMATRIX p = XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_near, m_far);
 		XMStoreFloat4x4(&m_projectionMatrix, p);
 	}
 

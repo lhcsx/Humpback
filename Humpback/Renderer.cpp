@@ -170,8 +170,8 @@ namespace Humpback
 		XMStoreFloat4x4(&m_cbufferPerPass.viewM, XMMatrixTranspose(viewM));
 		XMStoreFloat4x4(&m_cbufferPerPass.projM, XMMatrixTranspose(projM));
 		XMStoreFloat4x4(&m_cbufferPerPass.viewProjM, XMMatrixTranspose(viewProjM));
-		m_cbufferPerPass.nearZ = m_near;
-		m_cbufferPerPass.farZ = m_far;
+		m_cbufferPerPass.nearZ = m_mainCamera->GetNearZ();
+		m_cbufferPerPass.farZ = m_mainCamera->GetFarZ();
 		m_cbufferPerPass.cameraPosW = m_mainCamera->GetPosition();
 		m_cbufferPerPass.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
 		m_cbufferPerPass.lights[0].direction = { 0.57735f, -0.57735f, 0.57735f };
@@ -216,7 +216,7 @@ namespace Humpback
 		for (auto& e: m_renderableList)
 		{
 			const auto& instanceData = e->instances;
-
+			// todo  frustum culling.
 			for (size_t i = 0; i < instanceData.size(); i++)
 			{
 				XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
@@ -400,7 +400,7 @@ namespace Humpback
 
 		_updateTheViewport();
 
-		m_mainCamera->UpdateProjectionMatrix(0.25f * HMathHelper::PI, m_aspectRatio, m_near, m_far);
+		m_mainCamera->SetFrustum(0.25f * HMathHelper::PI, m_aspectRatio, 1.0f, 1000.0f);
 	}
 
 
@@ -475,7 +475,7 @@ namespace Humpback
 
 	void Renderer::_createCamera()
 	{
-		m_mainCamera = std::make_unique<Camera>(m_near, m_far);
+		m_mainCamera = std::make_unique<Camera>();
 	}
 
 	void Renderer::_createSceneGeometry()
@@ -626,11 +626,22 @@ namespace Humpback
 		fin >> ignore >> primCount;
 		fin >> ignore >> ignore >> ignore >> ignore;
 
+		XMFLOAT3 vMinF(FLT_MAX, FLT_MAX, FLT_MAX);
+		XMFLOAT3 vMaxF(-FLT_MIN, -FLT_MAX, -FLT_MAX);
+
+		XMVECTOR vMin = XMLoadFloat3(&vMinF);
+		XMVECTOR vMax = XMLoadFloat3(&vMaxF);
+
 		std::vector<Vertex> vertices(vertCount);
 		for (size_t i = 0; i < vertCount; i++)
 		{
 			fin >> vertices[i].position.x >> vertices[i].position.y >> vertices[i].position.z;
 			fin >> vertices[i].normal.x >> vertices[i].normal.y >> vertices[i].normal.z;
+
+			XMVECTOR p = XMLoadFloat3(&vertices[i].position);
+
+			vMin = XMVectorMin(p, vMin);
+			vMax = XMVectorMax(p, vMax);
 		}
 
 		fin >> ignore >> ignore >> ignore;
@@ -670,6 +681,12 @@ namespace Humpback
 		skullSM.indexCount = indices.size();
 		skullSM.baseVertexLocation = 0;
 		skullSM.startIndexLocation = 0;
+
+		BoundingBox aabb;
+		XMStoreFloat3(&aabb.Center, 0.5f * (vMin + vMax));
+		XMStoreFloat3(&aabb.Extents, 0.5f * (vMax - vMin));
+
+		skullSM.aabb = aabb;
 
 		skullMesh->drawArgs["skull"] = skullSM;
 
@@ -908,6 +925,7 @@ namespace Humpback
 		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
 		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
 		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
+		skullRitem->aabb = skullRitem->mesh->drawArgs["skull"].aabb;
 
 		int n = 5;
 		m_instanceCount = n * n * n;
