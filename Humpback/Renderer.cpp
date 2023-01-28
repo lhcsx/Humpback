@@ -209,17 +209,38 @@ namespace Humpback
 		}
 	}
 
+
+	
+
 	void Renderer::_updateInstanceData()
 	{
 		auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
 
+		BoundingFrustum& mainCamFrustum = m_mainCamera->GetFrustum();
+
+		XMMATRIX view = m_mainCamera->GetViewMatrix();
+		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+
 		for (auto& e: m_renderableList)
 		{
+			// Each group of instances.
+
 			const auto& instanceData = e->instances;
-			// todo  frustum culling.
 			for (size_t i = 0; i < instanceData.size(); i++)
 			{
+				// Each instance.
+
 				XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
+				XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(world), world);
+
+				XMMATRIX viewToLocal = XMMatrixMultiply(invView, invWorld);
+
+				BoundingFrustum instanceLocalSpaceFrustum;
+				mainCamFrustum.Transform(instanceLocalSpaceFrustum, viewToLocal);
+
+				// todo
+				// frustum culling.
+
 				InstanceData data;
 				XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
 				data.materialIndex = instanceData[i].materialIndex;

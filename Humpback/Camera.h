@@ -4,6 +4,7 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
 
 #include "HMathHelper.h"
 
@@ -27,9 +28,10 @@ namespace Humpback
 		DirectX::XMVECTOR GetForwardVector();
 		DirectX::XMVECTOR GetRightVector();
 
-
 		DirectX::XMMATRIX GetViewMatrix();
 		DirectX::XMMATRIX GetProjectionMatrix();
+
+		DirectX::BoundingFrustum& GetFrustum();
 
 		void SetPosition(float x, float y, float z);
 		void SetPosition(DirectX::XMVECTOR pos);
@@ -63,5 +65,7 @@ namespace Humpback
 		DirectX::XMFLOAT4X4 m_projectionMatrix = HMathHelper::Identity4x4();
 
 		DirectX::XMFLOAT3 m_up = { 0.0f, 1.0f, 0.0f};
+
+		DirectX::BoundingFrustum m_frustum;
 	};
 }

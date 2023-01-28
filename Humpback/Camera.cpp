@@ -63,6 +63,11 @@ namespace Humpback
 		return XMLoadFloat4x4(&m_projectionMatrix);
 	}
 
+	DirectX::BoundingFrustum& Camera::GetFrustum()
+	{
+		return m_frustum;
+	}
+
 	void Camera::SetPosition(float x, float y, float z)
 	{
 		m_position.x = x;
@@ -171,6 +176,7 @@ namespace Humpback
 	{
 		XMMATRIX p = XMMatrixPerspectiveFovLH(m_fovY, m_aspect, m_near, m_far);
 		XMStoreFloat4x4(&m_projectionMatrix, p);
-	}
 
+		BoundingFrustum::CreateFromMatrix(m_frustum, p);
+	}
 }
