@@ -158,5 +158,7 @@ namespace Humpback
 		PassConstants						m_cbufferPerPass;
 
 		unsigned int m_instanceCount = 0;
+
+		bool m_enableFrustumCulling = true;
 	};
 }

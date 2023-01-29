@@ -209,9 +209,6 @@ namespace Humpback
 		}
 	}
 
-
-	
-
 	void Renderer::_updateInstanceData()
 	{
 		auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
@@ -221,6 +218,7 @@ namespace Humpback
 		XMMATRIX view = m_mainCamera->GetViewMatrix();
 		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 
+		int visibleInstanceCount = 0;
 		for (auto& e: m_renderableList)
 		{
 			// Each group of instances.
@@ -238,15 +236,17 @@ namespace Humpback
 				BoundingFrustum instanceLocalSpaceFrustum;
 				mainCamFrustum.Transform(instanceLocalSpaceFrustum, viewToLocal);
 
-				// todo
-				// frustum culling.
+				if (instanceLocalSpaceFrustum.Contains(e->aabb) || m_enableFrustumCulling == false)
+				{
+					InstanceData data;
+					XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
+					data.materialIndex = instanceData[i].materialIndex;
 
-				InstanceData data;
-				XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
-				data.materialIndex = instanceData[i].materialIndex;
-
-				currentInstanceBuffer->CopyData(i, data);
+					currentInstanceBuffer->CopyData(visibleInstanceCount++, data);
+				}
 			}
+
+			e->instanceCount = visibleInstanceCount;
 		}
 	}
 
@@ -348,7 +348,7 @@ namespace Humpback
 
 			//cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
-			cmdList->DrawIndexedInstanced(obj->indexCount, obj->instances.size(), obj->startIndexLocation, obj->baseVertexLocation, 0);
+			cmdList->DrawIndexedInstanced(obj->indexCount, obj->instanceCount, obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
 	}
 
