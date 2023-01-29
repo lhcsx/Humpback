@@ -184,10 +184,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return 0;
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
-        gRenderer->OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        gRenderer->OnMouseDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
     case WM_MOUSEMOVE:
         gRenderer->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        return 0;
+    case WM_MOUSEWHEEL:
+        gRenderer->OnMouseWheel(GET_WHEEL_DELTA_WPARAM(wParam));
         return 0;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);

@@ -439,7 +439,7 @@ namespace Humpback
 		_cleanUp();
 	}
 
-	void Renderer::OnMouseDown(WPARAM btnState, int x, int y)
+	void Renderer::OnMouseDown(int x, int y)
 	{
 		m_lastMousePoint.x = x;
 		m_lastMousePoint.y = y;
@@ -466,6 +466,13 @@ namespace Humpback
 
 		m_lastMousePoint.x = x;
 		m_lastMousePoint.y = y;
+	}
+
+	void Renderer::OnMouseWheel(short delta)
+	{
+		auto pos = XMLoadFloat3(&m_mainCamera->GetPosition());
+		auto newPos = pos + (m_mainCamera->GetForwardVector() * delta * 0.05f);
+		m_mainCamera->SetPosition(newPos);
 	}
 
 	void Renderer::_cleanUp()
