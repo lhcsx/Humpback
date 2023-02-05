@@ -145,5 +145,11 @@
     <FxCompile Include="Shaders\Lighting.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Sky.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Common.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

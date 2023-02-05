@@ -148,17 +148,19 @@ namespace Humpback
 
 		std::unique_ptr<Camera>				m_mainCamera = nullptr;
 
-		std::unordered_map<std::string, std::unique_ptr<Mesh>> m_meshes;
-		std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
-		std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
+		std::unordered_map<std::string, std::unique_ptr<Mesh>>		m_meshes;
+		std::unordered_map<std::string, std::unique_ptr<Material>>	m_materials;
+		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
 
-		std::vector<std::unique_ptr<RenderableObject>>		m_renderableList;
+		std::vector<std::unique_ptr<RenderableObject>>				m_renderableList;
 		std::vector<RenderableObject*> m_renderLayers[(int)RenderLayer::Count];
 
-		PassConstants						m_cbufferPerPass;
+		PassConstants												m_cbufferPerPass;
 
-		unsigned int m_instanceCount = 0;
+		unsigned int	m_instanceCount = 0;
 
-		bool m_enableFrustumCulling = true;
+		bool			m_enableFrustumCulling = true;
+
+		int				m_skyTexHeapIndex = 0;
 	};
 }

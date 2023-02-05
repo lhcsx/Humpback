@@ -813,15 +813,19 @@ namespace Humpback
 
 	void Renderer::_createRootSignature()
 	{
-		CD3DX12_DESCRIPTOR_RANGE texTable;
-		texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0);
+		CD3DX12_DESCRIPTOR_RANGE texTable0;
+		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
 
-		CD3DX12_ROOT_PARAMETER slotRootParameter[4];
+		CD3DX12_DESCRIPTOR_RANGE texTable1;
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1, 0);
+
+		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
 		slotRootParameter[0].InitAsShaderResourceView(0, 1);
 		slotRootParameter[1].InitAsShaderResourceView(1, 1);
 		slotRootParameter[2].InitAsConstantBufferView(0);
-		slotRootParameter[3].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
+		slotRootParameter[3].InitAsDescriptorTable(1, &texTable0, D3D12_SHADER_VISIBILITY_PIXEL);
+		slotRootParameter[4].InitAsDescriptorTable(1, &texTable1, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		auto staticSamplers = D3DUtil::GetCommonStaticSamplers();
 
@@ -845,22 +849,17 @@ namespace Humpback
 
 	void Renderer::_createShadersAndInputLayout()
 	{
-		// Load shaders pre-compiled.
-		//std::wstring vsPath = L"\\shaders\\Compiled\\SimpleShaderVS.cso";
-		//std::wstring psPath = L"\\shaders\\Compiled\\SimpleShaderPS.cso";
-		//vsPath = GetAssetPath(vsPath);
-		//psPath = GetAssetPath(psPath);
-
-		//m_vertexShader = LoadBinary(vsPath);
-		//m_pixelShader = LoadBinary(psPath);
-
-		
-		// Compile shaders in Runtime for easily debugging.
 		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
 		std::wstring shaderFullPath = GetAssetPath(shaderPath);
 
 		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_1");
 		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_1");
+
+		std::wstring skyBoxShaderPath = L"\\shaders\\Sky.hlsl";
+		std::wstring skyBoxShaderFullPath = GetAssetPath(skyBoxShaderPath);
+
+		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", "vs_5_1");
+		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", "vs_5_1");
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -871,12 +870,11 @@ namespace Humpback
 
 	void Renderer::_createPso()
 	{
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
-
-		//
+		// -----------------------------------------------------------------------------
 		// PSO for opaque objects.
-		//
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
 		ZeroMemory(&opaquePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+
 		opaquePsoDesc.InputLayout = { m_inputLayout.data(), (UINT)m_inputLayout.size() };
 		opaquePsoDesc.pRootSignature = m_rootSignature.Get();
 		opaquePsoDesc.VS =
@@ -901,19 +899,33 @@ namespace Humpback
 		opaquePsoDesc.SampleDesc.Quality = m_4xMsaaState ? (m_4xMsaaQuality - 1) : 0;
 		opaquePsoDesc.DSVFormat = m_dsFormat;
 		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&m_psos["opaque"])));
+		// --------------------------------------------------------------------------------
+		
+		// PSO for sky box.
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC skyBoxPSODesc = opaquePsoDesc;
 
+		skyBoxPSODesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		skyBoxPSODesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		skyBoxPSODesc.pRootSignature = m_rootSignature.Get();
 
-		//
-		// PSO for opaque wireframe objects.
-		//
+		skyBoxPSODesc.VS =
+		{
+			reinterpret_cast<BYTE*>(m_shaders["skyBoxVS"]->GetBufferPointer()),
+			m_shaders["skyBoxVS"]->GetBufferSize()
+		};
+		skyBoxPSODesc.PS = 
+		{
+			reinterpret_cast<BYTE*>(m_shaders["skyBoxPS"]->GetBufferPointer()),
+			m_shaders["skyBoxPS"]->GetBufferSize()
+		};
 
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC opaqueWireframePsoDesc = opaquePsoDesc;
-		opaqueWireframePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&opaqueWireframePsoDesc, IID_PPV_ARGS(&m_psos["opaque_wireframe"])));
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&skyBoxPSODesc, IID_PPV_ARGS(&m_psos["skybox"])));
 	}
 
 	void Renderer::_createRenderableObjects()
 	{
+		// todo
+
 		/*auto boxGO = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
@@ -936,7 +948,9 @@ namespace Humpback
 		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
 		m_renderableList.push_back(std::move(gridRitem));*/
 
-		auto skullRitem = std::make_unique<RenderableObject>();
+		// Instancing
+		// ----------------------------------------------------------------------------
+		/*auto skullRitem = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
 		skullRitem->texTrans = HMathHelper::Identity4x4();
 		skullRitem->cbIndex = 2;
@@ -982,10 +996,12 @@ namespace Humpback
 
 		m_renderableList.push_back(std::move(skullRitem));
 
+		// ------------------------------------------------------------------------------
+
 		for (auto& e : m_renderableList)
 		{
 			m_renderLayers[(int)RenderLayer::Opaque].push_back(e.get());
-		}
+		}*/
 	}	
 
 	void Renderer::_createMaterialsData()
@@ -998,21 +1014,21 @@ namespace Humpback
 		bricksMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 		bricksMat->roughness = 0.1f;
 
-		auto stoneMat = std::make_unique<Material>();
-		stoneMat->name = "mat_stone";
-		stoneMat->matCBIdx = 1;
-		stoneMat->diffuseSrvHeapIndex = 1;
-		stoneMat->diffuseAlbedo = XMFLOAT4(Colors::LightSteelBlue);
-		stoneMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
-		stoneMat->roughness = 0.3f;
-
 		auto tileMat = std::make_unique<Material>();
 		tileMat->name = "mat_tile";
-		tileMat->matCBIdx = 2;
-		tileMat->diffuseSrvHeapIndex = 2;
+		tileMat->matCBIdx = 1;
+		tileMat->diffuseSrvHeapIndex = 1;
 		tileMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
 		tileMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 		tileMat->roughness = 0.2f;
+
+		auto mirrorMat = std::make_unique<Material>();
+		mirrorMat->name = "mat_mirror";
+		mirrorMat->matCBIdx = 2;
+		mirrorMat->diffuseSrvHeapIndex = 2;
+		mirrorMat->diffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+		mirrorMat->fresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
+		mirrorMat->roughness = 0.1f;
 
 		auto skullMat = std::make_unique<Material>();
 		skullMat->name = "mat_skull";
@@ -1020,37 +1036,53 @@ namespace Humpback
 		skullMat->diffuseSrvHeapIndex = 2;
 		skullMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
-		skullMat->roughness = 0.3f;
+		skullMat->roughness = 0.2f;
+
+
+		auto skyMat = std::make_unique<Material>();
+		skyMat->name = "mat_sky";
+		skyMat->matCBIdx = 4;
+		skyMat->diffuseSrvHeapIndex = 3;
+		skyMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		skyMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		skyMat->roughness = 1.0f;
+
 
 		m_materials["mat_bricks"] = std::move(bricksMat);
-		m_materials["mat_stone"] = std::move(stoneMat);
 		m_materials["mat_tile"] = std::move(tileMat);
+		m_materials["mat_mirror"] = std::move(mirrorMat);
 		m_materials["mat_skull"] = std::move(skullMat);
+		m_materials["mat_sky"] = std::move(skyMat);
 	}
 
 	void Renderer::_loadTextures()
 	{
-		auto bricksTex = std::make_unique<Texture>();
-		bricksTex->name = "tex_bricks";
-		bricksTex->filePath = L"Textures/bricks.dds";
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
-			bricksTex->filePath.c_str(), bricksTex->resource, bricksTex->uploadHeap));
+		std::vector<std::string> texNames =
+		{
+			"tex_bricks",
+			"tex_tile",
+			"tex_default",
+			"cube_map_sky",
+		};
 
-		auto stoneTex = std::make_unique<Texture>();
-		stoneTex->name = "tex_stone";
-		stoneTex->filePath = L"Textures/stone.dds";
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
-			stoneTex->filePath.c_str(), stoneTex->resource, stoneTex->uploadHeap));
+		std::vector<std::wstring> texPaths =
+		{
+			L"Textures/bricks2.dds",
+			L"Textures/tile.dds",
+			L"Textures/white1x1.dds",
+			L"Textures/grasscube1024.dds",
+		};
 
-		auto tileTex = std::make_unique<Texture>();
-		tileTex->name = "tex_tile";
-		tileTex->filePath = L"Textures/tile.dds";
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
-			tileTex->filePath.c_str(), tileTex->resource, tileTex->uploadHeap));
+		for (size_t i = 0; i < texPaths.size(); i++)
+		{
+			auto tex = std::make_unique<Texture>();
+			tex->name = texNames[i];
+			tex->filePath = texPaths[i];
+			ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
+				tex->filePath.c_str(), tex->resource, tex->uploadHeap));
 
-		m_textures[bricksTex->name] = std::move(bricksTex);
-		m_textures[stoneTex->name] = std::move(stoneTex);
-		m_textures[tileTex->name] = std::move(tileTex);
+			m_textures[tex->name] = std::move(tex);
+		}
 	}
 
 	void Renderer::_createDescriptorHeaps()
@@ -1064,8 +1096,9 @@ namespace Humpback
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
 		auto bricksTex = m_textures["tex_bricks"]->resource;
-		auto stoneTex = m_textures["tex_stone"]->resource;
 		auto tileTex = m_textures["tex_tile"]->resource;
+		auto defaultTex = m_textures["tex_default"]->resource;
+		auto skyCubeMap = m_textures["cube_map_sky"]->resource;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1078,15 +1111,25 @@ namespace Humpback
 
 		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
 
-		srvDesc.Format = stoneTex->GetDesc().Format;
-		srvDesc.Texture2D.MipLevels = stoneTex->GetDesc().MipLevels;
-		m_device->CreateShaderResourceView(stoneTex.Get(), &srvDesc, srvDescHandle);
-
-		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
-
 		srvDesc.Format = tileTex->GetDesc().Format;
 		srvDesc.Texture2D.MipLevels = tileTex->GetDesc().MipLevels;
 		m_device->CreateShaderResourceView(tileTex.Get(), &srvDesc, srvDescHandle);
+
+		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+
+		srvDesc.Format = defaultTex->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = defaultTex->GetDesc().MipLevels;
+		m_device->CreateShaderResourceView(defaultTex.Get(), &srvDesc, srvDescHandle);
+
+		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
+		srvDesc.TextureCube.MostDetailedMip = 0;
+		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
+
+		m_skyTexHeapIndex = 3;
 	}
 
 	void Renderer::_createFrameResources()
