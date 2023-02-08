@@ -46,10 +46,10 @@ namespace Humpback
 		void Tick();			// Tick the engine.
 
 
-		void OnMouseDown(WPARAM btnState, int x, int y);
+		void OnMouseDown(int x, int y);
 		void OnMouseUp();
 		void OnMouseMove(WPARAM btnState, int x, int y);
-
+		void OnMouseWheel(short delta);
 
 	private:
 
