@@ -134,8 +134,8 @@ namespace Humpback
 
 	void Renderer::_updateCBuffers()
 	{
-		//_updateCBufferPerObject();
-		_updateInstanceData();
+		_updateCBufferPerObject();
+		//_updateInstanceData();
 		_updateMatCBuffer();
 		_updateCBufferPerPass();
 	}
@@ -151,7 +151,10 @@ namespace Humpback
 
 				ObjectConstants objConstants;
 				XMStoreFloat4x4(&(objConstants.worldM), XMMatrixTranspose(worldM));
-				objConstants.MaterialIndex = obj->material->matCBIdx;
+				if (obj->material != nullptr)
+				{
+					objConstants.MaterialIndex = obj->material->matCBIdx;
+				}
 
 				curObjCBuffer->CopyData(obj->cbIndex, objConstants);
 
@@ -190,7 +193,8 @@ namespace Humpback
 		for (auto& m : m_materials)
 		{
 			Material* pMat = m.second.get();
-			if (pMat->numFramesDirty > 0)
+
+			if (pMat != nullptr && pMat->numFramesDirty > 0)
 			{
 				
 				MaterialConstants matConstants;
@@ -211,43 +215,43 @@ namespace Humpback
 
 	void Renderer::_updateInstanceData()
 	{
-		auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
+		//auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
 
-		BoundingFrustum& mainCamFrustum = m_mainCamera->GetFrustum();
+		//BoundingFrustum& mainCamFrustum = m_mainCamera->GetFrustum();
 
-		XMMATRIX view = m_mainCamera->GetViewMatrix();
-		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+		//XMMATRIX view = m_mainCamera->GetViewMatrix();
+		//XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 
-		int visibleInstanceCount = 0;
-		for (auto& e: m_renderableList)
-		{
-			// Each group of instances.
+		//int visibleInstanceCount = 0;
+		//for (auto& e: m_renderableList)
+		//{
+		//	// Each group of instances.
 
-			const auto& instanceData = e->instances;
-			for (size_t i = 0; i < instanceData.size(); i++)
-			{
-				// Each instance.
+		//	const auto& instanceData = e->instances;
+		//	for (size_t i = 0; i < instanceData.size(); i++)
+		//	{
+		//		// Each instance.
 
-				XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
-				XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(world), world);
+		//		XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
+		//		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(world), world);
 
-				XMMATRIX viewToLocal = XMMatrixMultiply(invView, invWorld);
+		//		XMMATRIX viewToLocal = XMMatrixMultiply(invView, invWorld);
 
-				BoundingFrustum instanceLocalSpaceFrustum;
-				mainCamFrustum.Transform(instanceLocalSpaceFrustum, viewToLocal);
+		//		BoundingFrustum instanceLocalSpaceFrustum;
+		//		mainCamFrustum.Transform(instanceLocalSpaceFrustum, viewToLocal);
 
-				if (instanceLocalSpaceFrustum.Contains(e->aabb) || m_enableFrustumCulling == false)
-				{
-					InstanceData data;
-					XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
-					data.materialIndex = instanceData[i].materialIndex;
+		//		if (instanceLocalSpaceFrustum.Contains(e->aabb) || m_enableFrustumCulling == false)
+		//		{
+		//			InstanceData data;
+		//			XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
+		//			data.materialIndex = instanceData[i].materialIndex;
 
-					currentInstanceBuffer->CopyData(visibleInstanceCount++, data);
-				}
-			}
+		//			currentInstanceBuffer->CopyData(visibleInstanceCount++, data);
+		//		}
+		//	}
 
-			e->instanceCount = visibleInstanceCount;
-		}
+		//	e->instanceCount = visibleInstanceCount;
+		//}
 	}
 
 	void Renderer::_render()
@@ -284,14 +288,25 @@ namespace Humpback
 		
 		// Bind per-pass constant buffer.
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
-		m_commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
 		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
-		m_commandList->SetGraphicsRootShaderResourceView(1, matBuffer->GetGPUVirtualAddress());
+		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 
-		m_commandList->SetGraphicsRootDescriptorTable(3, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+		// set skybox root descriptor.
+		CD3DX12_GPU_DESCRIPTOR_HANDLE skyDesHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+		skyDesHandle.Offset(m_skyTexHeapIndex, m_cbvSrvUavDescriptorSize);
+		m_commandList->SetGraphicsRootDescriptorTable(3, skyDesHandle);
 
+		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+
+		// Render Opaques.
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
+
+		// Render Sky box.
+		m_commandList->SetPipelineState(m_psos["skybox"].Get());
+		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Sky]);
+
 
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
 			_getCurrentBackbuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -318,9 +333,8 @@ namespace Humpback
 			ThrowInvalidParameterException();
 		}
 
-		//auto objCB = m_curFrameResource->objCBuffer->Resource();
-		//auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
-
+		auto objCB = m_curFrameResource->objCBuffer->Resource();
+		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
 
 
 		for (size_t i = 0; i < objList.size(); i++)
@@ -339,16 +353,15 @@ namespace Humpback
 
 			cmdList->IASetPrimitiveTopology(obj->primitiveTopology);
 
-			cmdList->SetGraphicsRootShaderResourceView(0, 
-				m_curFrameResource->instanceBuffer->Resource()->GetGPUVirtualAddress());
 
+			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
+			objCBAddress += obj->cbIndex * objCBByteSize;
 
-		/*	D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objCB->GetGPUVirtualAddress();
-			objCBAddress += obj->cbIndex * objCBByteSize;*/
+			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
-			//cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-
-			cmdList->DrawIndexedInstanced(obj->indexCount, obj->instanceCount, obj->startIndexLocation, obj->baseVertexLocation, 0);
+			//cmdList->DrawIndexedInstanced(obj->indexCount, obj->instanceCount, obj->startIndexLocation, obj->baseVertexLocation, 0);
+			
+			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
 	}
 
@@ -824,19 +837,19 @@ namespace Humpback
 		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE texTable1;
-		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1, 0);
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, 0);
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
-		slotRootParameter[0].InitAsShaderResourceView(0, 1);
-		slotRootParameter[1].InitAsShaderResourceView(1, 1);
-		slotRootParameter[2].InitAsConstantBufferView(0);
+		slotRootParameter[0].InitAsConstantBufferView(0);
+		slotRootParameter[1].InitAsConstantBufferView(1);
+		slotRootParameter[2].InitAsShaderResourceView(0, 1);
 		slotRootParameter[3].InitAsDescriptorTable(1, &texTable0, D3D12_SHADER_VISIBILITY_PIXEL);
 		slotRootParameter[4].InitAsDescriptorTable(1, &texTable1, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		auto staticSamplers = D3DUtil::GetCommonStaticSamplers();
 
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, staticSamplers.size(),
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, slotRootParameter, staticSamplers.size(),
 			staticSamplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> serializedRootSig = nullptr;
@@ -866,7 +879,7 @@ namespace Humpback
 		std::wstring skyBoxShaderFullPath = GetAssetPath(skyBoxShaderPath);
 
 		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", "vs_5_1");
-		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", "vs_5_1");
+		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", "ps_5_1");
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -931,17 +944,30 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
-		// todo
+		auto sky = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&sky->worldM, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
+		sky->texTrans = HMathHelper::Identity4x4();
+		sky->cbIndex = 0;
+		sky->material = m_materials["mat_sky"].get();
+		sky->mesh = m_meshes["shapeGeo"].get();
+		sky->indexCount = sky->mesh->drawArgs["sphere"].indexCount;
+		sky->startIndexLocation = sky->mesh->drawArgs["sphere"].startIndexLocation;
+		sky->baseVertexLocation = sky->mesh->drawArgs["sphere"].baseVertexLocation;
 
-		/*auto boxGO = std::make_unique<RenderableObject>();
+		m_renderLayers[(int)RenderLayer::Sky].push_back(sky.get());
+		m_renderableList.push_back(std::move(sky));
+
+		auto boxGO = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 		boxGO->cbIndex = 0;
-		boxGO->material = m_materials["mat_stone"].get();
+		boxGO->material = m_materials["mat_mirror"].get();
 		boxGO->mesh = m_meshes["shapeGeo"].get();
 		boxGO->indexCount = boxGO->mesh->drawArgs["box"].indexCount;
 		boxGO->startIndexLocation = boxGO->mesh->drawArgs["box"].startIndexLocation;
 		boxGO->baseVertexLocation = boxGO->mesh->drawArgs["box"].baseVertexLocation;
+		
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(boxGO.get());
 		m_renderableList.push_back(std::move(boxGO));
 
 		auto gridRitem = std::make_unique<RenderableObject>();
@@ -953,7 +979,24 @@ namespace Humpback
 		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
 		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
 		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		m_renderableList.push_back(std::move(gridRitem));*/
+		
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(gridRitem.get());
+		m_renderableList.push_back(std::move(gridRitem));
+
+		auto skullRitem = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
+		skullRitem->texTrans = HMathHelper::Identity4x4();
+		skullRitem->cbIndex = 2;
+		skullRitem->material = m_materials["mat_skull"].get();
+		skullRitem->mesh = m_meshes["skullGeo"].get();
+		skullRitem->instanceCount = 0;
+		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
+		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
+		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
+		
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(skullRitem.get());
+		m_renderableList.push_back(std::move(skullRitem));
+
 
 		// Instancing
 		// ----------------------------------------------------------------------------
@@ -1001,14 +1044,9 @@ namespace Humpback
 			}
 		}
 
-		m_renderableList.push_back(std::move(skullRitem));
+		m_renderableList.push_back(std::move(skullRitem));*/
 
 		// ------------------------------------------------------------------------------
-
-		for (auto& e : m_renderableList)
-		{
-			m_renderLayers[(int)RenderLayer::Opaque].push_back(e.get());
-		}*/
 	}	
 
 	void Renderer::_createMaterialsData()
@@ -1041,8 +1079,8 @@ namespace Humpback
 		skullMat->name = "mat_skull";
 		skullMat->matCBIdx = 3;
 		skullMat->diffuseSrvHeapIndex = 2;
-		skullMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		skullMat->fresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+		skullMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.7f, 0.8f, 1.0f);
+		skullMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		skullMat->roughness = 0.2f;
 
 
@@ -1097,7 +1135,7 @@ namespace Humpback
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.NumDescriptors = 3;
+		srvHeapDesc.NumDescriptors = 4;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
@@ -1132,6 +1170,7 @@ namespace Humpback
 
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
+		srvDesc.Format = skyCubeMap->GetDesc().Format;
 		srvDesc.TextureCube.MostDetailedMip = 0;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);

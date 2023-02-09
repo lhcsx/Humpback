@@ -2,6 +2,8 @@
 // 2023-01-05
 
 
+#include "Common.hlsl"
+
 
 struct VertexIn
 {
@@ -22,8 +24,17 @@ VertexOut VS(VertexIn vsIn)
     
     vsOut.posL = vsIn.posL;
     
+    float4 posW = mul(float4(vsIn.posL, 1), gWorld);
     
+    posW.xyz += gEyePosW;
+    
+    vsOut.posH = mul(posW, gViewProj).xyww;
     
     
 	return vsOut;
+}
+
+float4 PS(VertexOut psIn) : SV_Target
+{
+    return gSkyCubeMap.Sample(samLinearWrap, psIn.posL);
 }

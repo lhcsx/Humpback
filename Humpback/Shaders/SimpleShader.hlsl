@@ -26,18 +26,18 @@ VertexOut VSMain(VertexIn vin, uint instanceID : SV_InstanceID)
 {
     VertexOut vout;
     
-    InstanceData insData = gInstanceBuffer[instanceID];
+    //InstanceData insData = gInstanceBuffer[instanceID];
     
     // Transform to homogeneous clip space.
-    float4 posW = mul(float4(vin.posL, 1.0f), insData.world);
+    float4 posW = mul(float4(vin.posL, 1.0f), gWorld);
     vout.posW = posW.xyz;
 
     vout.posH = mul(posW, gViewProj);
 
-    vout.normal = mul(vin.normal, (float3x3) insData.world);
+    vout.normal = mul(vin.normal, (float3x3) gWorld);
     vout.uv = vin.uv;
     
-    vout.matIdx = insData.materialIndex;
+    vout.matIdx = gMatIndex;
 
     return vout;
 }

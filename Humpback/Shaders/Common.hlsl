@@ -45,11 +45,9 @@ cbuffer cbPerObject : register(b0)
 //};
 
 //StructuredBuffer<InstanceData> gInstanceBuffer : register(t0, space1);
-StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t1, space1);
+StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t0, space1);
 
-
-
-cbuffer cbPass : register(b0)
+cbuffer cbPass : register(b1)
 {
     float4x4 gView;
     float4x4 gInvView;
@@ -70,4 +68,6 @@ cbuffer cbPass : register(b0)
     Light lights[MaxLights];
 };
 
-Texture2D gDiffuseMapArray[4] : register(t0);
+
+TextureCube gSkyCubeMap : register(t0);
+Texture2D gDiffuseMapArray[4] : register(t1); 

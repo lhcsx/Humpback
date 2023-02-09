@@ -67,7 +67,7 @@ namespace Humpback
 		std::unique_ptr<UploadBuffer<PassConstants>> passCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<MaterialConstants>> materialCBuffer = nullptr;
 
-		std::unique_ptr<UploadBuffer<InstanceData>> instanceBuffer = nullptr;
+		//std::unique_ptr<UploadBuffer<InstanceData>> instanceBuffer = nullptr;
 
 		unsigned int fence = 0;
 	};
