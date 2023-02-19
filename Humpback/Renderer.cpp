@@ -837,7 +837,7 @@ namespace Humpback
 		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE texTable1;
-		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1, 0);
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1, 0);
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
@@ -885,6 +885,7 @@ namespace Humpback
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 	}
 
@@ -1105,6 +1106,7 @@ namespace Humpback
 		std::vector<std::string> texNames =
 		{
 			"tex_bricks",
+			"tex_bricks_normal",
 			"tex_tile",
 			"tex_default",
 			"cube_map_sky",
@@ -1113,6 +1115,7 @@ namespace Humpback
 		std::vector<std::wstring> texPaths =
 		{
 			L"Textures/bricks2.dds",
+			L"Textures/bricks2_nmap.dds",
 			L"Textures/tile.dds",
 			L"Textures/white1x1.dds",
 			L"Textures/grasscube1024.dds",
@@ -1135,38 +1138,34 @@ namespace Humpback
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.NumDescriptors = 4;
+		srvHeapDesc.NumDescriptors = 5;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		auto bricksTex = m_textures["tex_bricks"]->resource;
-		auto tileTex = m_textures["tex_tile"]->resource;
-		auto defaultTex = m_textures["tex_default"]->resource;
+		std::vector<ComPtr<ID3D12Resource>> tex2DList = {
+			m_textures["tex_bricks"]->resource,
+			m_textures["tex_bricks_normal"]->resource,
+			m_textures["tex_tile"]->resource,
+			m_textures["tex_default"]->resource
+		};
+
 		auto skyCubeMap = m_textures["cube_map_sky"]->resource;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = bricksTex->GetDesc().Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = bricksTex->GetDesc().MipLevels;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-		m_device->CreateShaderResourceView(bricksTex.Get(), &srvDesc, srvDescHandle);
 
-		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+		for (size_t i = 0; i < tex2DList.size(); i++)
+		{
+			srvDesc.Format = tex2DList[i]->GetDesc().Format;
+			srvDesc.Texture2D.MipLevels = tex2DList[i]->GetDesc().MipLevels;
+			m_device->CreateShaderResourceView(tex2DList[i].Get(), &srvDesc, srvDescHandle);
 
-		srvDesc.Format = tileTex->GetDesc().Format;
-		srvDesc.Texture2D.MipLevels = tileTex->GetDesc().MipLevels;
-		m_device->CreateShaderResourceView(tileTex.Get(), &srvDesc, srvDescHandle);
-
-		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
-
-		srvDesc.Format = defaultTex->GetDesc().Format;
-		srvDesc.Texture2D.MipLevels = defaultTex->GetDesc().MipLevels;
-		m_device->CreateShaderResourceView(defaultTex.Get(), &srvDesc, srvDescHandle);
-
-		srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+			srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
+		}
 
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
@@ -1175,7 +1174,7 @@ namespace Humpback
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
 
-		m_skyTexHeapIndex = 3;
+		m_skyTexHeapIndex = tex2DList.size();
 	}
 
 	void Renderer::_createFrameResources()
