@@ -69,5 +69,24 @@ cbuffer cbPass : register(b1)
 };
 
 
+float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
+{
+    float3 result = 0;
+    
+    // Scale normal frome [0, 1] - [-1, 1];
+    result = normalMapSample * 2.0f - 1.0f;
+    
+    float3 N = unitNormalW;
+    float3 T = normalize(tangentW - dot(tangentW, N) * N);
+    float3 B = cross(N, T);
+    
+    // Transform normal from TBN space to world sapce.
+    float3x3 tbn2World = float3x3(T, B, N);
+    result = mul(normalMapSample, tbn2World);
+    
+    return result;
+}
+
+
 TextureCube gSkyCubeMap : register(t0);
 Texture2D gDiffuseMapArray[4] : register(t1); 

@@ -589,6 +589,7 @@ namespace Humpback
 			vertices[k].position = box.vertices[i].Position;
 			vertices[k].normal = box.vertices[i].Normal;
 			vertices[k].uv = box.vertices[i].TexC;
+			vertices[k].tangent = box.vertices[i].TangentU;
 		}
 
 		for (size_t i = 0; i < grid.vertices.size(); ++i, ++k)
@@ -596,6 +597,7 @@ namespace Humpback
 			vertices[k].position = grid.vertices[i].Position;
 			vertices[k].normal = grid.vertices[i].Normal;
 			vertices[k].uv = grid.vertices[i].TexC;
+			vertices[k].tangent = grid.vertices[i].TangentU;
 		}
 
 		for (size_t i = 0; i < sphere.vertices.size(); ++i, ++k)
@@ -603,6 +605,7 @@ namespace Humpback
 			vertices[k].position = sphere.vertices[i].Position;
 			vertices[k].normal = sphere.vertices[i].Normal;
 			vertices[k].uv = sphere.vertices[i].TexC;
+			vertices[k].tangent = sphere.vertices[i].TangentU;
 		}
 
 		for (size_t i = 0; i < cylinder.vertices.size(); ++i, ++k)
@@ -610,6 +613,7 @@ namespace Humpback
 			vertices[k].position = cylinder.vertices[i].Position;
 			vertices[k].normal = cylinder.vertices[i].Normal;
 			vertices[k].uv = cylinder.vertices[i].TexC;
+			vertices[k].tangent = cylinder.vertices[i].TangentU;
 		}
 
 		std::vector<std::uint16_t> indices;
@@ -1063,10 +1067,10 @@ namespace Humpback
 		auto tileMat = std::make_unique<Material>();
 		tileMat->name = "mat_tile";
 		tileMat->matCBIdx = 1;
-		tileMat->diffuseSrvHeapIndex = 1;
+		tileMat->diffuseSrvHeapIndex = 0;
 		tileMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
 		tileMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		tileMat->roughness = 0.2f;
+		tileMat->roughness = 0.9f;
 
 		auto mirrorMat = std::make_unique<Material>();
 		mirrorMat->name = "mat_mirror";
