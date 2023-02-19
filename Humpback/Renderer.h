@@ -163,5 +163,6 @@ namespace Humpback
 		bool			m_enableFrustumCulling = true;
 
 		int				m_skyTexHeapIndex = 0;
+		int				m_defaultNormalMapIndex = 0;
 	};
 }

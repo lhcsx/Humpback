@@ -51,10 +51,12 @@ float4 PSMain(VertexOut pin) : SV_Target
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
     
-    float4 normalSample = gDiffuseMapArray[1].Sample(samLinearWrap, pin.uv);
-    normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
-    
     MaterialData matData = gMaterialDataBuffer[pin.matIdx];
+    
+    float4 normalSample = gDiffuseMapArray[matData.normalMapIndex].Sample(samLinearWrap, pin.uv);
+    normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
+
+    //return float4(normalSample.xyz, 1);
     
     float3 eyeDir = normalize(gEyePosW - pin.posW);
     

@@ -202,6 +202,7 @@ namespace Humpback
 				matConstants.fresnelR0 = pMat->fresnelR0;
 				matConstants.roughness = pMat->roughness;
 				matConstants.diffuseMapIndex = pMat->diffuseSrvHeapIndex;
+				matConstants.normalMapIndex = pMat->normalSrvHeapIndex;
 				
 				XMMATRIX matrixMatTrans = XMLoadFloat4x4(&pMat->matTransform);
 				XMStoreFloat4x4(&matConstants.matTransform, XMMatrixTranspose(matrixMatTrans));
@@ -979,7 +980,7 @@ namespace Humpback
 		gridRitem->worldM = HMathHelper::Identity4x4();
 		XMStoreFloat4x4(&gridRitem->texTrans, XMMatrixScaling(8.0f, 8.0f, 1.0f));
 		gridRitem->cbIndex = 1;
-		gridRitem->material = m_materials["mat_tile"].get();
+		gridRitem->material = m_materials["mat_bricks"].get();
 		gridRitem->mesh = m_meshes["shapeGeo"].get();
 		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
 		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
@@ -1060,14 +1061,16 @@ namespace Humpback
 		bricksMat->name = "mat_bricks";
 		bricksMat->matCBIdx = 0;
 		bricksMat->diffuseSrvHeapIndex = 0;
-		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::ForestGreen);
+		bricksMat->normalSrvHeapIndex = 1;
+		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
 		bricksMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 		bricksMat->roughness = 0.1f;
 
 		auto tileMat = std::make_unique<Material>();
 		tileMat->name = "mat_tile";
 		tileMat->matCBIdx = 1;
-		tileMat->diffuseSrvHeapIndex = 0;
+		tileMat->diffuseSrvHeapIndex = 2;
+		tileMat->normalSrvHeapIndex = 1;
 		tileMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
 		tileMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
 		tileMat->roughness = 0.9f;
@@ -1076,6 +1079,7 @@ namespace Humpback
 		mirrorMat->name = "mat_mirror";
 		mirrorMat->matCBIdx = 2;
 		mirrorMat->diffuseSrvHeapIndex = 2;
+		mirrorMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
 		mirrorMat->diffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 		mirrorMat->fresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
 		mirrorMat->roughness = 0.1f;
@@ -1084,6 +1088,7 @@ namespace Humpback
 		skullMat->name = "mat_skull";
 		skullMat->matCBIdx = 3;
 		skullMat->diffuseSrvHeapIndex = 2;
+		skullMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
 		skullMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.7f, 0.8f, 1.0f);
 		skullMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		skullMat->roughness = 0.2f;
@@ -1113,6 +1118,7 @@ namespace Humpback
 			"tex_bricks_normal",
 			"tex_tile",
 			"tex_default",
+			"tex_default_normal",
 			"cube_map_sky",
 		};
 
@@ -1122,8 +1128,11 @@ namespace Humpback
 			L"Textures/bricks2_nmap.dds",
 			L"Textures/tile.dds",
 			L"Textures/white1x1.dds",
+			L"Textures/default_nmap.dds",
 			L"Textures/grasscube1024.dds",
 		};
+
+		m_defaultNormalMapIndex = 4;
 
 		for (size_t i = 0; i < texPaths.size(); i++)
 		{
@@ -1142,7 +1151,7 @@ namespace Humpback
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.NumDescriptors = 5;
+		srvHeapDesc.NumDescriptors = 6;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
@@ -1151,7 +1160,8 @@ namespace Humpback
 			m_textures["tex_bricks"]->resource,
 			m_textures["tex_bricks_normal"]->resource,
 			m_textures["tex_tile"]->resource,
-			m_textures["tex_default"]->resource
+			m_textures["tex_default"]->resource,
+			m_textures["tex_default_normal"]->resource
 		};
 
 		auto skyCubeMap = m_textures["cube_map_sky"]->resource;
