@@ -54,13 +54,18 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
+		m_shadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
+
 		_loadTextures();
 		_createDescriptorHeaps();
 		_createRootSignature();
 		_createShadersAndInputLayout();
+
+		_createSceneLights();
 		_createSceneGeometry();
 		_createMaterialsData();
 		_createRenderableObjects();
+
 		_createFrameResources();
 		_createPso();
 
@@ -177,12 +182,12 @@ namespace Humpback
 		m_cbufferPerPass.farZ = m_mainCamera->GetFarZ();
 		m_cbufferPerPass.cameraPosW = m_mainCamera->GetPosition();
 		m_cbufferPerPass.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
-		m_cbufferPerPass.lights[0].direction = { 0.57735f, -0.57735f, 0.57735f };
-		m_cbufferPerPass.lights[0].strength = { 0.6f, 0.6f, 0.6f };
-		m_cbufferPerPass.lights[1].direction = { -0.57735f, -0.57735f, 0.57735f };
-		m_cbufferPerPass.lights[1].strength = { 0.3f, 0.3f, 0.3f };
-		m_cbufferPerPass.lights[2].direction = { 0.0f, -0.707f, -0.707f };
-		m_cbufferPerPass.lights[2].strength = { 0.15f, 0.15f, 0.15f };
+
+		for (size_t i = 0; i < 3; i++)
+		{
+			m_cbufferPerPass.lights[i].direction = m_directionalLights[i].GetDirection();
+			m_cbufferPerPass.lights[i].strength = m_directionalLights[i].GetIntensity();
+		}
 		
 		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
 	}
@@ -253,6 +258,11 @@ namespace Humpback
 
 		//	e->instanceCount = visibleInstanceCount;
 		//}
+	}
+
+	void Renderer::_updateShadowMap()
+	{
+
 	}
 
 	void Renderer::_render()
@@ -737,6 +747,19 @@ namespace Humpback
 		skullMesh->drawArgs["skull"] = skullSM;
 
 		m_meshes[skullMesh->Name] = std::move(skullMesh);
+	}
+
+	void Renderer::_createSceneLights()
+	{
+		m_directionalLights = std::make_unique<DirectionalLight[]>(3);
+		m_directionalLights[0].SetDirection(0.57735f, -0.57735f, 0.57735f);
+		m_directionalLights[0].SetIntensity(0.6f, 0.6f, 0.6f);
+
+		m_directionalLights[1].SetDirection(-0.57735f, -0.57735f, 0.57735f);
+		m_directionalLights[1].SetIntensity(0.3f, 0.3f, 0.3f);
+
+		m_directionalLights[2].SetDirection(0.0f, -0.707f, -0.707f);
+		m_directionalLights[2].SetIntensity(0.15f, 0.15f, 0.15f);
 	}
 
 	void Renderer::_initD3D12()

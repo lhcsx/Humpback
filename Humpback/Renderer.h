@@ -14,6 +14,8 @@
 #include "HMathHelper.h"
 #include "RenderableObject.h"
 #include "Texture.h"
+#include "ShadowMap.h"
+#include "Light.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -66,6 +68,7 @@ namespace Humpback
 		void _createSceneGeometry();
 		void _createSimpleGeometry();
 		void _loadGeometryFromFile();
+		void _createSceneLights();
 
 		void _createRootSignature();
 		void _createShadersAndInputLayout();
@@ -79,18 +82,19 @@ namespace Humpback
 
 		void _updateTheViewport();
 
-		void _update();			// Update per frame.
-		void _updateCamera();
-		void _onKeyboardInput();
 
 		void _render();			// Render per frame.
 		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);
 
+		void _update();			// Update per frame.
+		void _updateCamera();
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
 		void _updateMatCBuffer();
 		void _updateInstanceData();
+		void _updateShadowMap();
+		void _onKeyboardInput();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -164,5 +168,9 @@ namespace Humpback
 
 		int				m_skyTexHeapIndex = 0;
 		int				m_defaultNormalMapIndex = 0;
+
+		std::unique_ptr<ShadowMap>	m_shadowMap = nullptr;
+
+		std::unique_ptr<DirectionalLight[]> m_directionalLights = nullptr;
 	};
 }

@@ -11,7 +11,6 @@
 #include "UploadBufferHelper.h"
 #include "Vertex.h"
 #include "Material.h"
-#include "Light.h"
 
 
 namespace Humpback
@@ -25,6 +24,18 @@ namespace Humpback
 		unsigned int pat0;
 		unsigned int pat1;
 		unsigned int pat2;
+	};
+
+
+#define MaxLights 16
+	struct LightConstants
+	{
+		DirectX::XMFLOAT3 strength = { 0.5f, 0.5f, 0.5f };
+		float falloffStart = 1.0f;
+		DirectX::XMFLOAT3 direction = { 0.0f, -1.0f, 0.0f };
+		float falloffEnd = 10.0f;
+		DirectX::XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+		float spotPower = 64.0f;
 	};
 
 
@@ -47,7 +58,7 @@ namespace Humpback
 		
 		DirectX::XMFLOAT4 ambient = { 0.0f, 0.0f, 0.0f, 1.0f };
 		
-		Light lights[MaxLights];
+		LightConstants lights[MaxLights];
 	};
 
 	class FrameResource
