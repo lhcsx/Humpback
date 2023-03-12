@@ -22,6 +22,9 @@ namespace Humpback
 		unsigned int Width() const;
 		unsigned int Height() const;
 
+		D3D12_VIEWPORT GetViewPort() const;
+		D3D12_RECT GetScissorRect() const;
+
 		CD3DX12_GPU_DESCRIPTOR_HANDLE SRV() const;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE DSV() const;
 

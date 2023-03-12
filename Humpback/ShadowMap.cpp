@@ -32,6 +32,16 @@ namespace Humpback
         return m_height;
     }
 
+    D3D12_VIEWPORT ShadowMap::GetViewPort() const
+    {
+        return m_viewPort;
+    }
+
+    D3D12_RECT ShadowMap::GetScissorRect() const
+    {
+        return m_scissorRect;
+    }
+
     CD3DX12_GPU_DESCRIPTOR_HANDLE ShadowMap::SRV() const
     {
         return m_gpuSRVHandle;

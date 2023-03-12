@@ -85,6 +85,7 @@ namespace Humpback
 
 		void _render();			// Render per frame.
 		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);
+		void _renderShadowMap();
 
 		void _update();			// Update per frame.
 		void _updateCamera();
@@ -92,6 +93,7 @@ namespace Humpback
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
 		void _updateMatCBuffer();
+		void _UpdateShadowCB();
 		void _updateInstanceData();
 		void _updateShadowMap();
 		void _onKeyboardInput();
@@ -145,6 +147,7 @@ namespace Humpback
 		unsigned int						m_rtvDescriptorSize = 0;
 		POINT								m_lastMousePoint = {0, 0};
 		unsigned int						m_cbvSrvUavDescriptorSize = 0;
+		unsigned int						m_dsvDescriptorSize = 0;
 		unsigned int						m_passCbvOffset = 0;
 		
 		float								m_theta = 1.5f * DirectX::XM_PI;
@@ -158,7 +161,8 @@ namespace Humpback
 		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
 
 		std::vector<std::unique_ptr<RenderableObject>>				m_renderableList;
-		std::vector<RenderableObject*> m_renderLayers[(int)RenderLayer::Count];
+		std::vector<RenderableObject*>								m_renderLayers[(int)RenderLayer::Count];
+		DirectX::BoundingSphere										m_sceneBoundingSphere;
 
 		PassConstants												m_cbufferPerPass;
 
@@ -168,6 +172,10 @@ namespace Humpback
 
 		int				m_skyTexHeapIndex = 0;
 		int				m_defaultNormalMapIndex = 0;
+		int				m_shadowMapHeapIndex = 0;
+		XMFLOAT4X4		m_lightViewMatrix;
+		XMFLOAT4X4		m_lightProjMatrix;
+		XMFLOAT4X4		m_VPTMatrix;
 
 		std::unique_ptr<ShadowMap>	m_shadowMap = nullptr;
 

@@ -18,9 +18,7 @@ namespace Humpback
 
 		Light() = default;
 		virtual ~Light() = default;
-
-		Light(const Light& rhs) = delete;
-		Light& operator=(const Light& rhs) = delete;
+		Light& operator=(const Light& rhs) = default;
 
 		DirectX::XMFLOAT3 GetIntensity() { return m_intensity; }
 		
@@ -38,10 +36,8 @@ namespace Humpback
 	public:
 		DirectionalLight() = default;
 		~DirectionalLight() = default;
+		DirectionalLight& operator=(const DirectionalLight& rhs) = default;
 
-		DirectionalLight(const DirectionalLight& rhs) = delete;
-		DirectionalLight& operator=(const DirectionalLight& rhs) = delete;
-		
 		DirectX::XMFLOAT3 GetDirection() { return m_direction; }
 		void SetDirection(DirectX::XMFLOAT3 direction) { m_direction = direction; }
 		void SetDirection(float x, float y, float z) { m_direction = DirectX::XMFLOAT3(x, y, z); }
