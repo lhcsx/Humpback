@@ -11,6 +11,7 @@ SamplerState samLinearWrap : register(s2);
 SamplerState samLinearClamp : register(s3);
 SamplerState samAniWrap : register(s4);
 SamplerState samAniClamp : register(s5);
+SamplerComparisonState samShadow : register(s6);
 
 struct MaterialData
 {
@@ -55,6 +56,7 @@ cbuffer cbPass : register(b1)
     float4x4 gInvProj;
     float4x4 gViewProj;
     float4x4 gInvViewProj;
+    float4x4 gShadowVPT;
     float3 gEyePosW;
     float cbPerObjectPad1;
     float2 gRenderTargetSize;
@@ -67,6 +69,11 @@ cbuffer cbPass : register(b1)
     
     Light lights[MaxLights];
 };
+
+TextureCube gSkyCubeMap : register(t0);
+Texture2D gShadowMap : register(t1);
+
+Texture2D gDiffuseMapArray[4] : register(t2);
 
 
 float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
@@ -87,6 +94,31 @@ float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
     return result;
 }
 
+float CalShadowFactor(float4 posH)
+{
+    posH.xyz /= posH.w;
+    
+    float depth = posH.z;
+    uint width, height, mipsCount;
+    gShadowMap.GetDimensions(0, width, height, mipsCount);
+    
+    float dx = 1.0f / width;    // Texel size.
+    
+    const float2 offsets[9] =
+    {
+        float2(-dx, -dx), float2(0.0f, -dx), float2(dx, -dx),
+        float2(-dx, 0.0f), float2(0.0f, 0.0f), float2(dx, 0.0f),
+        float2(dx, -dx), float2(dx, dx), float2(0.0f, dx)
+    };
+    
+    float shadowFactor = 0.0f;
+    
+    [unroll]
+    for (int i = 0; i < 9; ++i)
+    {
+        uint status = 0;
+        shadowFactor = gShadowMap.SampleCmpLevelZero(samShadow, posH.xy + offsets[i], posH.z).r;
+    }
 
-TextureCube gSkyCubeMap : register(t0);
-Texture2D gDiffuseMapArray[4] : register(t1); 
+    return shadowFactor / 9.0f;
+}

@@ -174,12 +174,13 @@ namespace Humpback
 	{
 		XMMATRIX viewM = m_mainCamera->GetViewMatrix();
 		XMMATRIX projM = m_mainCamera->GetProjectionMatrix();
-
 		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
 
+		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_ShadowVPTMatrix);
 		XMStoreFloat4x4(&m_cbufferPerPass.viewM, XMMatrixTranspose(viewM));
 		XMStoreFloat4x4(&m_cbufferPerPass.projM, XMMatrixTranspose(projM));
 		XMStoreFloat4x4(&m_cbufferPerPass.viewProjM, XMMatrixTranspose(viewProjM));
+		XMStoreFloat4x4(&m_cbufferPerPass.shadowVPT, XMMatrixTranspose(shadowVPT));
 		m_cbufferPerPass.nearZ = m_mainCamera->GetNearZ();
 		m_cbufferPerPass.farZ = m_mainCamera->GetFarZ();
 		m_cbufferPerPass.cameraPosW = m_mainCamera->GetPosition();
@@ -223,7 +224,20 @@ namespace Humpback
 
 	void Renderer::_UpdateShadowCB()
 	{
-		// TODO
+		XMMATRIX lightView = XMLoadFloat4x4(&m_lightViewMatrix);
+		XMMATRIX lightProj = XMLoadFloat4x4(&m_lightProjMatrix);
+
+		XMMATRIX lightVP = XMMatrixMultiply(lightView, lightProj);
+
+		unsigned int w = m_shadowMap->Width();
+		unsigned int h = m_shadowMap->Height();
+
+		XMStoreFloat4x4(&m_shadowPassCB.viewM, lightView);
+		XMStoreFloat4x4(&m_shadowPassCB.projM, lightProj);
+		XMStoreFloat4x4(&m_shadowPassCB.viewProjM, lightVP);
+		m_shadowPassCB.cameraPosW = m_mainLightPos;
+
+		m_curFrameResource->passCBuffer->CopyData(1, m_shadowPassCB);
 	}
 
 	void Renderer::_updateInstanceData()
@@ -277,6 +291,8 @@ namespace Humpback
 		XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 
+		XMStoreFloat3(&m_mainLightPos, lightPos);
+
 		XMFLOAT3 sphereCenterLS;
 		XMStoreFloat3(&sphereCenterLS, XMVector3TransformCoord(targetPos, lightView));
 
@@ -298,7 +314,7 @@ namespace Humpback
 		XMMATRIX VPT = lightView * lightProj * T;
 		XMStoreFloat4x4(&m_lightViewMatrix, lightView);
 		XMStoreFloat4x4(&m_lightProjMatrix, lightProj);
-		XMStoreFloat4x4(&m_VPTMatrix,  VPT);
+		XMStoreFloat4x4(&m_ShadowVPTMatrix,  VPT);
 	}
 
 	void Renderer::_render()
@@ -317,13 +333,12 @@ namespace Humpback
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
-		// Bind per-pass constant buffer.
-		auto passCB = m_curFrameResource->passCBuffer->Resource();
-		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
 		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
 		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 
+		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+
+		// Shadow map pass.
 		_renderShadowMap();
 
 		auto backbufferView = _getCurrentBackBufferView();
@@ -346,12 +361,15 @@ namespace Humpback
 		skyDesHandle.Offset(m_skyTexHeapIndex, m_cbvSrvUavDescriptorSize);
 		m_commandList->SetGraphicsRootDescriptorTable(3, skyDesHandle);
 
-		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
-		// Render Opaques.
+		// Bind per-pass constant buffer.
+		auto passCB = m_curFrameResource->passCBuffer->Resource();
+		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		// Opaque pass.
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
-		// Render Sky box.
+		// Sky box pass.
 		m_commandList->SetPipelineState(m_psos["skybox"].Get());
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Sky]);
 
@@ -431,6 +449,13 @@ namespace Humpback
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
 		D3D12_GPU_VIRTUAL_ADDRESS passCBAddress = passCB->GetGPUVirtualAddress() + passCBByteSize;
 		m_commandList->SetGraphicsRootConstantBufferView(1, passCBAddress);
+		
+		m_commandList->SetPipelineState(m_psos["shadowMap"].Get());
+
+		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
+
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+			m_shadowMap->Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
 	void Renderer::OnResize()
@@ -1311,7 +1336,7 @@ namespace Humpback
 		for (size_t i = 0; i < FRAME_RESOURCE_COUNT; i++)
 		{
 			m_frameResources.push_back(
-				std::make_unique<FrameResource>(m_device.Get(), 1, 
+				std::make_unique<FrameResource>(m_device.Get(), 2, 
 					m_renderableList.size(), m_instanceCount, m_materials.size()));
 		}
 	}

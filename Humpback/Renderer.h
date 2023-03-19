@@ -165,6 +165,7 @@ namespace Humpback
 		DirectX::BoundingSphere										m_sceneBoundingSphere;
 
 		PassConstants												m_cbufferPerPass;
+		PassConstants												m_shadowPassCB;
 
 		unsigned int	m_instanceCount = 0;
 
@@ -175,9 +176,10 @@ namespace Humpback
 		int				m_shadowMapHeapIndex = 0;
 		XMFLOAT4X4		m_lightViewMatrix;
 		XMFLOAT4X4		m_lightProjMatrix;
-		XMFLOAT4X4		m_VPTMatrix;
+		XMFLOAT4X4		m_ShadowVPTMatrix;
 
 		std::unique_ptr<ShadowMap>	m_shadowMap = nullptr;
+		DirectX::XMFLOAT3					m_mainLightPos = { 0.0f, 0.0f, 0.0f };
 
 		std::unique_ptr<DirectionalLight[]> m_directionalLights = nullptr;
 	};

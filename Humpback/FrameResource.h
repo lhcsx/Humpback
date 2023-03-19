@@ -47,6 +47,7 @@ namespace Humpback
 		DirectX::XMFLOAT4X4 invProjM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 viewProjM = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 invViewProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 shadowVPT = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT3 cameraPosW = { .0f, .0f, .0f };
 		float cbPerObjectPad1 = 0.0f;
 		DirectX::XMFLOAT2 renderTargetSize = { .0f, .0f };
