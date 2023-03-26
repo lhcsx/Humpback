@@ -229,12 +229,9 @@ namespace Humpback
 
 		XMMATRIX lightVP = XMMatrixMultiply(lightView, lightProj);
 
-		unsigned int w = m_shadowMap->Width();
-		unsigned int h = m_shadowMap->Height();
-
-		XMStoreFloat4x4(&m_shadowPassCB.viewM, lightView);
-		XMStoreFloat4x4(&m_shadowPassCB.projM, lightProj);
-		XMStoreFloat4x4(&m_shadowPassCB.viewProjM, lightVP);
+		XMStoreFloat4x4(&m_shadowPassCB.viewM, XMMatrixTranspose(lightView));
+		XMStoreFloat4x4(&m_shadowPassCB.projM, XMMatrixTranspose(lightProj));
+		XMStoreFloat4x4(&m_shadowPassCB.viewProjM, XMMatrixTranspose(lightVP));
 		m_shadowPassCB.cameraPosW = m_mainLightPos;
 
 		m_curFrameResource->passCBuffer->CopyData(1, m_shadowPassCB);
@@ -336,7 +333,10 @@ namespace Humpback
 		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
 		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 
+		m_commandList->SetGraphicsRootDescriptorTable(3, m_nullSrv);
+
 		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+
 
 		// Shadow map pass.
 		_renderShadowMap();
@@ -367,6 +367,7 @@ namespace Humpback
 		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
 		// Opaque pass.
+		m_commandList->SetPipelineState(m_psos["opaque"].Get());
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
 		// Sky box pass.
@@ -399,9 +400,9 @@ namespace Humpback
 			ThrowInvalidParameterException();
 		}
 
+
 		auto objCB = m_curFrameResource->objCBuffer->Resource();
 		auto objCBByteSize = D3DUtil::CalConstantBufferByteSize(sizeof(ObjectConstants));
-
 
 		for (size_t i = 0; i < objList.size(); i++)
 		{
@@ -948,10 +949,10 @@ namespace Humpback
 	void Renderer::_createRootSignature()
 	{
 		CD3DX12_DESCRIPTOR_RANGE texTable0;
-		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE texTable1;
-		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1, 0);
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 2, 0);
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
@@ -1305,6 +1306,7 @@ namespace Humpback
 
 		for (size_t i = 0; i < tex2DList.size(); i++)
 		{
+			// Create srv for diffuse and normal textures.
 			srvDesc.Format = tex2DList[i]->GetDesc().Format;
 			srvDesc.Texture2D.MipLevels = tex2DList[i]->GetDesc().MipLevels;
 			m_device->CreateShaderResourceView(tex2DList[i].Get(), &srvDesc, srvDescHandle);
@@ -1312,6 +1314,7 @@ namespace Humpback
 			srvDescHandle.Offset(1, m_cbvSrvUavDescriptorSize);
 		}
 
+		// Create srv for sky box.
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
 		srvDesc.Format = skyCubeMap->GetDesc().Format;
@@ -1322,9 +1325,27 @@ namespace Humpback
 		
 		m_shadowMapHeapIndex = tex2DList.size() + 1;
 
+		int nullCubeSrvIndex = m_shadowMapHeapIndex + 1;
+		int nullTexSrvIndex = nullCubeSrvIndex + 1;
+
 		auto srvCPUStart = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
 		auto srvGPUStart = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
 		auto dsvCPUStart = m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
+
+		auto nullSrv = CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCPUStart, nullCubeSrvIndex, m_cbvSrvUavDescriptorSize);
+		m_nullSrv = CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGPUStart, nullCubeSrvIndex, m_cbvSrvUavDescriptorSize);
+
+		// Create srv for null cube map.
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+
+		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture1D.ResourceMinLODClamp = 0.0f;
+		// Create srv for null shadow map.
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
 		m_shadowMap->BuildDescriptors(CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCPUStart, m_shadowMapHeapIndex, m_cbvSrvUavDescriptorSize),
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGPUStart, m_shadowMapHeapIndex, m_cbvSrvUavDescriptorSize),

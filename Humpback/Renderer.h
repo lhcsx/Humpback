@@ -174,6 +174,8 @@ namespace Humpback
 		int				m_skyTexHeapIndex = 0;
 		int				m_defaultNormalMapIndex = 0;
 		int				m_shadowMapHeapIndex = 0;
+		CD3DX12_GPU_DESCRIPTOR_HANDLE	m_nullSrv;
+
 		XMFLOAT4X4		m_lightViewMatrix;
 		XMFLOAT4X4		m_lightProjMatrix;
 		XMFLOAT4X4		m_ShadowVPTMatrix;

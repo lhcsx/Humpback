@@ -57,8 +57,6 @@ float4 PSMain(VertexOut pin) : SV_Target
     float4 normalSample = gDiffuseMapArray[matData.normalMapIndex].Sample(samLinearWrap, pin.uv);
     normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
 
-    //return float4(normalSample.xyz, 1);
-    
     float3 eyeDir = normalize(gEyePosW - pin.posW);
     
     float4 diffuse = gDiffuseMapArray[matData.diffuseMapIndex].Sample(samLinearWrap, pin.uv) * matData.albedo;
@@ -67,7 +65,8 @@ float4 PSMain(VertexOut pin) : SV_Target
     
     float shiniess = (1.0f - matData.roughness) * normalSample.a;
     Material mat = { matData.albedo, matData.fresnelR0, shiniess };
-    float3 shadowFactor = CalShadowFactor(pin.shadowPosH);
+    float shadowFactor = CalShadowFactor(pin.shadowPosH);
+    
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
     
     float3 l = directLight + ambient;

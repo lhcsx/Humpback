@@ -73,7 +73,7 @@ cbuffer cbPass : register(b1)
 TextureCube gSkyCubeMap : register(t0);
 Texture2D gShadowMap : register(t1);
 
-Texture2D gDiffuseMapArray[4] : register(t2);
+Texture2D gDiffuseMapArray[5] : register(t2);
 
 
 float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
@@ -116,8 +116,7 @@ float CalShadowFactor(float4 posH)
     [unroll]
     for (int i = 0; i < 9; ++i)
     {
-        uint status = 0;
-        shadowFactor = gShadowMap.SampleCmpLevelZero(samShadow, posH.xy + offsets[i], posH.z).r;
+        shadowFactor += gShadowMap.SampleCmpLevelZero(samShadow, posH.xy + offsets[i], posH.z).r;
     }
 
     return shadowFactor / 9.0f;

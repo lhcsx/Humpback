@@ -60,13 +60,13 @@ float3 ComputeDirectionLight(Light l, Material mat, float3 normal, float3 eyeDir
 
 
 float3 ComputeLighting(Light gLights[MaxLights], Material mat,
-	float3 pos, float3 normal, float3 eyeDir, float3 shadowFactor)
+	float3 pos, float3 normal, float3 eyeDir, float shadowFactor)
 {
 	float3 result = 0.0f;
 
 	// Light 0
     Light dirLight = gLights[0];
-	result = ComputeDirectionLight(dirLight, mat, normal, eyeDir);
+    result = shadowFactor * ComputeDirectionLight(dirLight, mat, normal, eyeDir);
 
 	return result;
 }
