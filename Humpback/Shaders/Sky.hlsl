@@ -24,7 +24,7 @@ VertexOut VS(VertexIn vsIn)
     
     vsOut.posL = vsIn.posL;
     
-    float4 posW = mul(float4(vsIn.posL, 1), gWorld);
+    float4 posW = mul(float4(vsIn.posL, 1.0f), gWorld);
     
     posW.xyz += gEyePosW;
     

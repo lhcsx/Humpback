@@ -61,10 +61,10 @@ float4 PSMain(VertexOut pin) : SV_Target
     
     float4 diffuse = gDiffuseMapArray[matData.diffuseMapIndex].Sample(samLinearWrap, pin.uv) * matData.albedo;
     
-    float3 ambient = gAmbientLight.rgb + diffuse.rgb;
+    float3 ambient = gAmbientLight.rgb * diffuse.rgb;
     
     float shiniess = (1.0f - matData.roughness) * normalSample.a;
-    Material mat = { matData.albedo, matData.fresnelR0, shiniess };
+    Material mat = { diffuse, matData.fresnelR0, shiniess };
     float shadowFactor = CalShadowFactor(pin.shadowPosH);
     
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);

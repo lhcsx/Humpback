@@ -840,7 +840,7 @@ namespace Humpback
 	{
 		m_directionalLights = std::make_unique<DirectionalLight[]>(3);
 		m_directionalLights[0].SetDirection(0.57735f, -0.57735f, 0.57735f);
-		m_directionalLights[0].SetIntensity(0.6f, 0.6f, 0.6f);
+		m_directionalLights[0].SetIntensity(2.f, 2.f, 2.f);
 
 		m_directionalLights[1].SetDirection(-0.57735f, -0.57735f, 0.57735f);
 		m_directionalLights[1].SetIntensity(0.3f, 0.3f, 0.3f);
@@ -1098,7 +1098,7 @@ namespace Humpback
 		auto boxGO = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
 		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
-		boxGO->cbIndex = 0;
+		boxGO->cbIndex = 1;
 		boxGO->material = m_materials["mat_mirror"].get();
 		boxGO->mesh = m_meshes["shapeGeo"].get();
 		boxGO->indexCount = boxGO->mesh->drawArgs["box"].indexCount;
@@ -1111,7 +1111,7 @@ namespace Humpback
 		auto gridRitem = std::make_unique<RenderableObject>();
 		gridRitem->worldM = HMathHelper::Identity4x4();
 		XMStoreFloat4x4(&gridRitem->texTrans, XMMatrixScaling(8.0f, 8.0f, 1.0f));
-		gridRitem->cbIndex = 1;
+		gridRitem->cbIndex = 2;
 		gridRitem->material = m_materials["mat_bricks"].get();
 		gridRitem->mesh = m_meshes["shapeGeo"].get();
 		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
@@ -1124,7 +1124,7 @@ namespace Humpback
 		auto skullRitem = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
 		skullRitem->texTrans = HMathHelper::Identity4x4();
-		skullRitem->cbIndex = 2;
+		skullRitem->cbIndex = 3;
 		skullRitem->material = m_materials["mat_skull"].get();
 		skullRitem->mesh = m_meshes["skullGeo"].get();
 		skullRitem->instanceCount = 0;
