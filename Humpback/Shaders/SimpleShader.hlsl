@@ -32,17 +32,17 @@ VertexOut VSMain(VertexIn vin, uint instanceID : SV_InstanceID)
     //InstanceData insData = gInstanceBuffer[instanceID];
     
     // Transform to homogeneous clip space.
-    float4 posW = mul(float4(vin.posL, 1.0f), gWorld);
+    float4 posW = mul(float4(vin.posL, 1.0f), _World);
     vout.posW = posW.xyz;
-    vout.posH = mul(posW, gViewProj);
-    vout.shadowPosH = mul(posW, gShadowVPT);
+    vout.posH = mul(posW, _ViewProj);
+    vout.shadowPosH = mul(posW, _ShadowVPT);
     
-    vout.tangent = mul(float4(vin.tangent, 0.0f), gWorld).xyz;
+    vout.tangent = mul(float4(vin.tangent, 0.0f), _World).xyz;
 
-    vout.normal = mul(vin.normal, (float3x3)gWorld);
+    vout.normal = mul(vin.normal, (float3x3)_World);
     vout.uv = vin.uv;
     
-    vout.matIdx = gMatIndex;
+    vout.matIdx = _MatIndex;
 
     return vout;
 }
@@ -52,16 +52,16 @@ float4 PSMain(VertexOut pin) : SV_Target
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
     
-    MaterialData matData = gMaterialDataBuffer[pin.matIdx];
+    MaterialData matData = _MaterialDataBuffer[pin.matIdx];
     
-    float4 normalSample = gDiffuseMapArray[matData.normalMapIndex].Sample(samLinearWrap, pin.uv);
+    float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
     normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
 
-    float3 eyeDir = normalize(gEyePosW - pin.posW);
+    float3 eyeDir = normalize(_EyePosW - pin.posW);
     
-    float4 diffuse = gDiffuseMapArray[matData.diffuseMapIndex].Sample(samLinearWrap, pin.uv) * matData.albedo;
+    float4 diffuse = _DiffuseMapArray[matData.diffuseMapIndex].Sample(_SamplerLinearWrap, pin.uv) * matData.albedo;
     
-    float3 ambient = gAmbientLight.rgb * diffuse.rgb;
+    float3 ambient = _AmbientLight.rgb * diffuse.rgb;
     
     float shiniess = (1.0f - matData.roughness) * normalSample.a;
     Material mat = { diffuse, matData.fresnelR0, shiniess };

@@ -54,11 +54,12 @@ namespace Humpback
 
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
 
-		m_shadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
+		_initRendererFeatures();
 
 		_loadTextures();
 		_createDescriptorHeaps();
 		_createRootSignature();
+		_createRootSignatureSSAO();
 		_createShadersAndInputLayout();
 
 		_createSceneLights();
@@ -888,6 +889,12 @@ namespace Humpback
 		_createSwapChain(factory.Get());
 	}
 
+	void Renderer::_initRendererFeatures()
+	{
+		m_shadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
+		m_featureSSAO = std::make_unique<SSAO>(m_width, m_height, m_device, m_commandList);
+	}
+
 	void Renderer::_createCommandObjects()
 	{
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -982,6 +989,66 @@ namespace Humpback
 			serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
+	void Renderer::_createRootSignatureSSAO()
+	{
+		CD3DX12_DESCRIPTOR_RANGE texTable0;
+		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0);
+
+		CD3DX12_DESCRIPTOR_RANGE texTable1;
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0);
+
+		CD3DX12_ROOT_PARAMETER rootParams[4];
+		rootParams[0].InitAsConstantBufferView(0);
+		rootParams[1].InitAsConstants(1, 1);
+		rootParams[2].InitAsDescriptorTable(1, &texTable0, D3D12_SHADER_VISIBILITY_PIXEL);
+		rootParams[3].InitAsDescriptorTable(1, &texTable1, D3D12_SHADER_VISIBILITY_PIXEL);
+
+		const CD3DX12_STATIC_SAMPLER_DESC pointClamp(0,
+			D3D12_FILTER_MIN_MAG_MIP_POINT,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+
+		const CD3DX12_STATIC_SAMPLER_DESC linearClamp(1,
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+
+		const CD3DX12_STATIC_SAMPLER_DESC depthSamp(2,
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.0f, 0, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE);
+
+		const CD3DX12_STATIC_SAMPLER_DESC linearWrap(1,
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+		std::array<CD3DX12_STATIC_SAMPLER_DESC, 4> staticSamps = {
+			pointClamp, linearClamp, depthSamp, linearWrap };
+
+		CD3DX12_ROOT_SIGNATURE_DESC rsDesc(4, rootParams, staticSamps.size(), 
+			staticSamps.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorMsg = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rsDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorMsg.GetAddressOf());
+
+		if (errorMsg != nullptr)
+		{
+			::OutputDebugStringA((char*)errorMsg->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(m_device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatureSSAO)));
+	}
+
 	void Renderer::_createShadersAndInputLayout()
 	{
 		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
@@ -1000,6 +1067,15 @@ namespace Humpback
 		std::wstring shadowMapShaderFullPath = GetAssetPath(shadowMapShaderPath);
 
 		m_shaders["shadowMapVS"] = D3DUtil::CompileShader(shadowMapShaderFullPath, nullptr, "VS", "vs_5_1");
+
+		std::wstring ssaoShaderPath = L"\\shaders\\SSAO.hlsl";
+		std::wstring ssaoShaderFullPath = GetAssetPath(ssaoShaderPath);
+
+		m_shaders["ssaoVS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "VS", "vs_5_1");
+		m_shaders["ssaoPS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "PS", "vs_5_1");
+
+		// TODO 
+		// Add ssao blur shader.
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},

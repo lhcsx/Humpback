@@ -24,11 +24,11 @@ VertexOut VS(VertexIn vsIn)
     
     vsOut.posL = vsIn.posL;
     
-    float4 posW = mul(float4(vsIn.posL, 1.0f), gWorld);
+    float4 posW = mul(float4(vsIn.posL, 1.0f), _World);
     
-    posW.xyz += gEyePosW;
+    posW.xyz += _EyePosW;
     
-    vsOut.posH = mul(posW, gViewProj).xyww;
+    vsOut.posH = mul(posW, _ViewProj).xyww;
     
     
 	return vsOut;
@@ -36,5 +36,5 @@ VertexOut VS(VertexIn vsIn)
 
 float4 PS(VertexOut psIn) : SV_Target
 {
-    return gSkyCubeMap.Sample(samLinearWrap, psIn.posL);
+    return _SkyCubeMap.Sample(_SamplerLinearWrap, psIn.posL);
 }

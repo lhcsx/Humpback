@@ -62,6 +62,20 @@ namespace Humpback
 		LightConstants lights[MaxLights];
 	};
 
+	struct SSAOConstants
+	{
+		DirectX::XMFLOAT4X4 projM;
+		DirectX::XMFLOAT4X4 invProjM;
+		DirectX::XMFLOAT4X4 projTexM;
+
+		DirectX::XMFLOAT4 offectVectors[12];
+
+		float radius = 0.5f;
+		float surfaceEpsilon = 0.05f;
+		float occlusionFadeStart = 0.2f;
+		float occlusionFadeEnd = 2.0f;
+	};
+
 	class FrameResource
 	{
 	public:
@@ -78,6 +92,7 @@ namespace Humpback
 		std::unique_ptr<UploadBuffer<ObjectConstants>> objCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<PassConstants>> passCBuffer = nullptr;
 		std::unique_ptr<UploadBuffer<MaterialConstants>> materialCBuffer = nullptr;
+		std::unique_ptr<UploadBuffer<SSAOConstants>> ssaoCBuffer = nullptr;
 
 		//std::unique_ptr<UploadBuffer<InstanceData>> instanceBuffer = nullptr;
 

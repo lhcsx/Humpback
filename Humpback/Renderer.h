@@ -16,6 +16,7 @@
 #include "Texture.h"
 #include "ShadowMap.h"
 #include "Light.h"
+#include "SSAO.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -48,7 +49,6 @@ namespace Humpback
 
 		void Tick();			// Tick the engine.
 
-
 		void OnMouseDown(int x, int y);
 		void OnMouseUp();
 		void OnMouseMove(WPARAM btnState, int x, int y);
@@ -57,12 +57,13 @@ namespace Humpback
 	private:
 
 		void _initD3D12();
+		void _initRendererFeatures();
+		void _initTimer();
 		void _createCommandObjects();
 		void _createSwapChain(IDXGIFactory4*);
 		void _createRtvAndDsvDescriptorHeaps();
 		void _cleanUp();
 		void _waitForPreviousFrame();
-		void _initTimer();
 
 		void _createCamera();
 		void _createSceneGeometry();
@@ -71,6 +72,7 @@ namespace Humpback
 		void _createSceneLights();
 
 		void _createRootSignature();
+		void _createRootSignatureSSAO();
 		void _createShadersAndInputLayout();
 		void _createPso();
 		void _createFrameResources();
@@ -113,7 +115,10 @@ namespace Humpback
 		ComPtr<ID3D12Resource>				m_frameBuffers[Renderer::FrameBufferCount];
 		ComPtr<ID3D12Resource>				m_depthStencilBuffer = nullptr;
 		ComPtr<ID3D12CommandAllocator>		m_commandAllocator = nullptr;
+
 		ComPtr<ID3D12RootSignature>			m_rootSignature = nullptr;
+		ComPtr<ID3D12RootSignature>			m_rootSignatureSSAO = nullptr;
+
 		std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> m_psos;
 
 		ComPtr<ID3D12GraphicsCommandList>	m_commandList = nullptr;
@@ -184,5 +189,7 @@ namespace Humpback
 		DirectX::XMFLOAT3					m_mainLightPos = { 0.0f, 0.0f, 0.0f };
 
 		std::unique_ptr<DirectionalLight[]> m_directionalLights = nullptr;
+
+		std::unique_ptr<SSAO> m_featureSSAO;
 	};
 }

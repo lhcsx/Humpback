@@ -5,13 +5,13 @@
 #include "Lighting.hlsl"
 
 
-SamplerState samPointWrap : register(s0);
-SamplerState samPointClamp : register(s1);
-SamplerState samLinearWrap : register(s2);
-SamplerState samLinearClamp : register(s3);
-SamplerState samAniWrap : register(s4);
-SamplerState samAniClamp : register(s5);
-SamplerComparisonState samShadow : register(s6);
+SamplerState _SamplerPointWrap : register(s0);
+SamplerState _SamplerPointClamp : register(s1);
+SamplerState _SamplerLinearWrap : register(s2);
+SamplerState _SamplerLinearClamp : register(s3);
+SamplerState _SamplerAniWrap : register(s4);
+SamplerState _SamplerAniClamp : register(s5);
+SamplerComparisonState _SamplerShadow : register(s6);
 
 struct MaterialData
 {
@@ -28,8 +28,8 @@ struct MaterialData
 
 cbuffer cbPerObject : register(b0)
 {
-    float4x4 gWorld;
-    uint gMatIndex;
+    float4x4 _World;
+    uint _MatIndex;
     uint pad0;
     uint pad1;
     uint pad2;
@@ -46,34 +46,34 @@ cbuffer cbPerObject : register(b0)
 //};
 
 //StructuredBuffer<InstanceData> gInstanceBuffer : register(t0, space1);
-StructuredBuffer<MaterialData> gMaterialDataBuffer : register(t0, space1);
+StructuredBuffer<MaterialData> _MaterialDataBuffer : register(t0, space1);
 
 cbuffer cbPass : register(b1)
 {
-    float4x4 gView;
-    float4x4 gInvView;
-    float4x4 gProj;
-    float4x4 gInvProj;
-    float4x4 gViewProj;
-    float4x4 gInvViewProj;
-    float4x4 gShadowVPT;
-    float3 gEyePosW;
-    float cbPerObjectPad1;
-    float2 gRenderTargetSize;
-    float2 gInvRenderTargetSize;
-    float gNearZ;
-    float gFarZ;
-    float gTotalTime;
-    float gDeltaTime;
-    float4 gAmbientLight;
+    float4x4 _View;
+    float4x4 _InvView;
+    float4x4 _Proj;
+    float4x4 _InvProj;
+    float4x4 _ViewProj;
+    float4x4 _InvViewProj;
+    float4x4 _ShadowVPT;
+    float3 _EyePosW;
+    float _PerObjectPad1;
+    float2 _RenderTargetSize;
+    float2 _InvRenderTargetSize;
+    float _NearZ;
+    float _FarZ;
+    float _TotalTime;
+    float _DeltaTime;
+    float4 _AmbientLight;
     
     Light lights[MaxLights];
 };
 
-TextureCube gSkyCubeMap : register(t0);
-Texture2D gShadowMap : register(t1);
+TextureCube _SkyCubeMap : register(t0);
+Texture2D _ShadowMap : register(t1);
 
-Texture2D gDiffuseMapArray[5] : register(t2);
+Texture2D _DiffuseMapArray[5] : register(t2);
 
 
 float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
@@ -100,7 +100,7 @@ float CalShadowFactor(float4 posH)
     
     float depth = posH.z;
     uint width, height, mipsCount;
-    gShadowMap.GetDimensions(0, width, height, mipsCount);
+    _ShadowMap.GetDimensions(0, width, height, mipsCount);
     
     float dx = 1.0f / width;    // Texel size.
     
@@ -116,7 +116,7 @@ float CalShadowFactor(float4 posH)
     [unroll]
     for (int i = 0; i < 9; ++i)
     {
-        shadowFactor += gShadowMap.SampleCmpLevelZero(samShadow, posH.xy + offsets[i], posH.z).r;
+        shadowFactor += _ShadowMap.SampleCmpLevelZero(_SamplerShadow, posH.xy + offsets[i], posH.z).r;
     }
 
     return shadowFactor / 9.0f;

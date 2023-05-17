@@ -12,8 +12,8 @@ struct VSIN
 
 float4 VS(VSIN vsin) : SV_POSITION
 {
-    float4 posW = mul(float4(vsin.pos, 1.0f), gWorld);
-    float4 posH = mul(posW, gViewProj);
+    float4 posW = mul(float4(vsin.pos, 1.0f), _World);
+    float4 posH = mul(posW, _ViewProj);
     
 	return posH;
 }
