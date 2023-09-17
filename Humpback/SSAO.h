@@ -19,7 +19,13 @@ namespace Humpback
 		SSAO(const SSAO& rhs) = delete;
 		SSAO& operator=(const SSAO& rhs) = delete;
 
+		void SetPSOs();
+		void OnResize();
+		void ComputeSSAO();
+
 		void Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount);
+
+		void RebuildDescriptors(ID3D12Resource* depthStencilBuffer);
 
 	private:
 
@@ -37,7 +43,9 @@ namespace Humpback
 		void _buildResources();
 		void _buildOffsetVectors();
 		void _buildRandomVectorTex(ID3D12GraphicsCommandList* cmdList);
-		void _buildDiscriptors();
+		void _buildDescriptors(ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
+			CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
+			unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize);
 
 		ID3D12Device* m_device;
 
@@ -56,7 +64,14 @@ namespace Humpback
 		CD3DX12_CPU_DESCRIPTOR_HANDLE m_SSAOTex1CPURtv;
 		CD3DX12_GPU_DESCRIPTOR_HANDLE m_SSAOTex1GPUSrv;
 
+		CD3DX12_CPU_DESCRIPTOR_HANDLE m_normalDepthCpuSrv;
 		CD3DX12_GPU_DESCRIPTOR_HANDLE m_normalDepthGPUSrv;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE m_normalDepthCpuRtv;
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE m_depthTexCpuSrv;
+		CD3DX12_GPU_DESCRIPTOR_HANDLE m_depthTexGpuSrv;
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE m_randomVectorCpuSrv;
 		CD3DX12_GPU_DESCRIPTOR_HANDLE m_randomVectorGPUSrv;
 
 		ID3D12PipelineState* m_SSAOPipelineState;

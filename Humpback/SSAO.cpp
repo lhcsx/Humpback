@@ -23,6 +23,20 @@ namespace Humpback
 		_buildRandomVectorTex(cmdList);
 	}
 
+	void SSAO::SetPSOs()
+	{
+		// TODO
+	}
+
+	void SSAO::OnResize()
+	{
+		// TODO
+	}
+
+	void SSAO::ComputeSSAO()
+	{
+	}
+
 	void SSAO::Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount)
 	{
 		if (cmdList == nullptr)
@@ -41,6 +55,35 @@ namespace Humpback
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		_doBlur(cmdList, blurCount, pCurFrameRes);
+	}
+
+	void SSAO::RebuildDescriptors(ID3D12Resource* depthStencilBuffer)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = NORMAL_DEPTH_FORMAT;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+		m_device->CreateShaderResourceView(m_normalDepthTexture.Get(), &srvDesc, m_normalDepthCpuSrv);
+
+		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		m_device->CreateShaderResourceView(depthStencilBuffer, &srvDesc, m_depthTexCpuSrv);
+
+		srvDesc.Format = AMBIENT_FORMAT;
+		m_device->CreateShaderResourceView(m_SSAOTexture0.Get(), &srvDesc, m_SSAOTex0CPUSrv);
+		m_device->CreateShaderResourceView(m_SSAOTexture1.Get(), &srvDesc, m_SSAOTex1CPUSrv);
+
+		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Format = NORMAL_DEPTH_FORMAT;
+		rtvDesc.Texture2D.MipSlice = 0;
+		rtvDesc.Texture2D.PlaneSlice = 0;
+		m_device->CreateRenderTargetView(m_normalDepthTexture.Get(), &rtvDesc, m_normalDepthCpuRtv);
+
+		rtvDesc.Format = AMBIENT_FORMAT;
+		m_device->CreateRenderTargetView(m_SSAOTexture0.Get(), &rtvDesc, m_SSAOTex0CPURtv);
+		m_device->CreateRenderTargetView(m_SSAOTexture1.Get(), &rtvDesc, m_SSAOTex1CPURtv);
 	}
 
 	void SSAO::_setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes)
@@ -243,9 +286,28 @@ namespace Humpback
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
-	void SSAO::_buildDiscriptors()
+	void SSAO::_buildDescriptors(
+		ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
+		unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize)
 	{
-		// TODO
+		m_SSAOTex0CPUSrv = hCpuRtv;
+		m_SSAOTex1CPUSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_normalDepthCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_depthTexCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_randomVectorCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+
+		m_SSAOTex0GPUSrv = hGpuSrv;
+		m_SSAOTex1GPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_normalDepthGPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_depthTexGpuSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_randomVectorGPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+
+		m_normalDepthCpuRtv = hCpuRtv;
+		m_SSAOTex0CPURtv = hCpuRtv.Offset(1, rtvDescriptorSize);
+		m_SSAOTex1CPURtv = hCpuRtv.Offset(1, rtvDescriptorSize);
+
+		RebuildDescriptors(depthStencilBuffer);
 	}
 
 	void SSAO::_doBlur(ID3D12GraphicsCommandList* cmdList, bool isHorizontal)

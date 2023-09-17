@@ -529,6 +529,8 @@ namespace Humpback
 
 		_updateTheViewport();
 
+		m_featureSSAO->RebuildDescriptors(m_depthStencilBuffer.Get());
+
 		m_mainCamera->SetFrustum(0.25f * HMathHelper::PI, m_aspectRatio, 1.0f, 1000.0f);
 	}
 
