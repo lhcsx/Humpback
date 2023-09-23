@@ -19,9 +19,9 @@ namespace Humpback
 		SSAO(const SSAO& rhs) = delete;
 		SSAO& operator=(const SSAO& rhs) = delete;
 
-		void SetPSOs();
-		void OnResize();
-		void ComputeSSAO();
+		void SetPSOs(ID3D12PipelineState* ssaoPSO, ID3D12PipelineState* blurPSO);
+		void OnResize(unsigned int newWidth, unsigned int newHeight);
+		void ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount);
 
 		void Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount);
 
@@ -75,7 +75,7 @@ namespace Humpback
 		CD3DX12_GPU_DESCRIPTOR_HANDLE m_randomVectorGPUSrv;
 
 		ID3D12PipelineState* m_SSAOPipelineState;
-		ID3D12PipelineState* m_BlurPipelineState;
+		ID3D12PipelineState* m_blurPipelineState;
 		
 
 		D3D12_VIEWPORT m_viewPort;

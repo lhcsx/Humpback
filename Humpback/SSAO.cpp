@@ -23,18 +23,63 @@ namespace Humpback
 		_buildRandomVectorTex(cmdList);
 	}
 
-	void SSAO::SetPSOs()
+	void SSAO::SetPSOs(ID3D12PipelineState* ssaoPSO, ID3D12PipelineState* blurPSO)
 	{
-		// TODO
+		m_SSAOPipelineState = ssaoPSO;
+		m_blurPipelineState = blurPSO;
 	}
 
-	void SSAO::OnResize()
+	void SSAO::OnResize(unsigned int newWidth, unsigned int newHeight)
 	{
-		// TODO
+		if (m_width != newWidth || m_height != newHeight)
+		{
+			m_viewPort.TopLeftX = .0f;
+			m_viewPort.TopLeftY = .0f;
+			m_viewPort.Width = newWidth / 2;
+			m_viewPort.Height = newHeight / 2;
+			m_viewPort.MinDepth = .0f;
+			m_viewPort.MaxDepth = 1.0f;
+
+			m_width = newWidth;
+			m_height = newHeight;
+
+			m_scissorRect = { 0, 0, (int)m_width / 2, (int)m_height / 2, };
+
+			_buildResources();
+		}
 	}
 
-	void SSAO::ComputeSSAO()
+	void SSAO::ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount)
 	{
+		cmdList->RSSetViewports(1, &m_viewPort);
+		cmdList->RSSetScissorRects(1, &m_scissorRect);
+
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		cmdList->OMSetRenderTargets(1, &m_SSAOTex0CPURtv, true, nullptr);
+
+		float clearValue[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		cmdList->ClearRenderTargetView(m_SSAOTex0CPURtv, clearValue, 0, nullptr);
+
+		auto cBufferAddress = curFrame->ssaoCBuffer->Resource()->GetGPUVirtualAddress();
+		cmdList->SetGraphicsRootConstantBufferView(0, cBufferAddress);
+		cmdList->SetGraphicsRoot32BitConstant(1, 0, 0);
+
+		cmdList->SetGraphicsRootDescriptorTable(2, m_normalDepthGPUSrv);
+		cmdList->SetGraphicsRootDescriptorTable(3, m_randomVectorGPUSrv);
+
+		cmdList->SetPipelineState(m_SSAOPipelineState);
+
+		cmdList->IASetVertexBuffers(0, 0, nullptr);
+		cmdList->IASetIndexBuffer(nullptr);
+		cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		cmdList->DrawInstanced(6, 1, 0, 0);
+
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		_doBlur(cmdList, blurCount, curFrame);
 	}
 
 	void SSAO::Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount)
@@ -108,7 +153,7 @@ namespace Humpback
 
 	void SSAO::_doBlur(ID3D12GraphicsCommandList* cmdList, int blurCount, FrameResource* frameRes)
 	{
-		cmdList->SetPipelineState(m_BlurPipelineState);
+		cmdList->SetPipelineState(m_blurPipelineState);
 
 		auto ssaoCBAddress = frameRes->ssaoCBuffer->Resource()->GetGPUVirtualAddress();
 		cmdList->SetGraphicsRootConstantBufferView(0, ssaoCBAddress);
