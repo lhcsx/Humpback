@@ -331,7 +331,7 @@ namespace Humpback
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
-	void SSAO::_buildDescriptors(
+	void SSAO::BuildDescriptors(
 		ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
 		unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize)

@@ -44,11 +44,8 @@ namespace Humpback
 	void Renderer::Initialize()
 	{
 		_initTimer();
-
 		_initD3D12();
-
-		_createCamera();
-		m_mainCamera->SetPosition(0.0f, 2.0f, -15.0f);
+		_initCamera();
 
 		OnResize();
 
@@ -137,6 +134,34 @@ namespace Humpback
 			auto newPos = pos + (m_mainCamera->GetRightVector() * 10.f * deltaT);
 			m_mainCamera->SetPosition(newPos);
 		}
+	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE Renderer::_getCpuSrv(int idx) const
+	{
+		auto srv = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
+		srv.Offset(idx, m_cbvSrvUavDescriptorSize);
+		return srv;
+	}
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE Renderer::_getGpuSrv(int idx) const
+	{
+		auto srv = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+		srv.Offset(idx, m_cbvSrvUavDescriptorSize);
+		return srv;
+	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE Renderer::_getDsv(int idx) const
+	{
+		auto dsv = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		dsv.Offset(idx, m_dsvDescriptorSize);
+		return dsv;
+	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE Renderer::_getRtv(int idx) const
+	{
+		auto rtv = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+		rtv.Offset(idx, m_rtvDescriptorSize);
+		return rtv;
 	}
 
 	void Renderer::_updateCBuffers()
@@ -611,6 +636,12 @@ namespace Humpback
 		m_timer->Reset();
 	}
 
+	void Renderer::_initCamera()
+	{
+		_createCamera();
+		m_mainCamera->SetPosition(0.0f, 2.0f, -15.0f);
+	}
+
 	void Renderer::_createCamera()
 	{
 		m_mainCamera = std::make_unique<Camera>();
@@ -989,6 +1020,8 @@ namespace Humpback
 
 		ThrowIfFailed(m_device->CreateRootSignature(0, serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+
+		_createRootSignatureSSAO();
 	}
 
 	void Renderer::_createRootSignatureSSAO()
@@ -1053,31 +1086,37 @@ namespace Humpback
 
 	void Renderer::_createShadersAndInputLayout()
 	{
-		std::wstring shaderPath = L"\\shaders\\SimpleShader.hlsl";
-		std::wstring shaderFullPath = GetAssetPath(shaderPath);
+		// TODO
+		// Optimize code.
+		// RegisterCode(fullpath, key);
+
+		std::wstring shaderFullPath = GetAssetPath(L"\\shaders\\SimpleShader.hlsl");
 
 		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_1");
 		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_1");
 
-		std::wstring skyBoxShaderPath = L"\\shaders\\Sky.hlsl";
-		std::wstring skyBoxShaderFullPath = GetAssetPath(skyBoxShaderPath);
+		std::wstring skyBoxShaderFullPath = GetAssetPath(L"\\shaders\\Sky.hlsl");
 
 		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", "vs_5_1");
 		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", "ps_5_1");
 
-		std::wstring shadowMapShaderPath = L"\\shaders\\ShadowMap.hlsl";
-		std::wstring shadowMapShaderFullPath = GetAssetPath(shadowMapShaderPath);
+		std::wstring shadowMapShaderFullPath = GetAssetPath(L"\\shaders\\ShadowMap.hlsl");
 
 		m_shaders["shadowMapVS"] = D3DUtil::CompileShader(shadowMapShaderFullPath, nullptr, "VS", "vs_5_1");
 
-		std::wstring ssaoShaderPath = L"\\shaders\\SSAO.hlsl";
-		std::wstring ssaoShaderFullPath = GetAssetPath(ssaoShaderPath);
+		std::wstring ssaoShaderFullPath = GetAssetPath(L"\\shaders\\SSAO.hlsl");
 
 		m_shaders["ssaoVS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "VS", "vs_5_1");
 		m_shaders["ssaoPS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "PS", "vs_5_1");
 
-		// TODO 
-		// Add ssao blur shader.
+		std::wstring blurShaderFullPath = GetAssetPath(L"\\shaders\\Blur.hlsl");
+		m_shaders["blurVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", "vs_5_1");
+		m_shaders["blurPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", "vs_5_1");
+
+		std::wstring normalOnlyFullPath = GetAssetPath(L"\\shaders\\NormalOnly.hlsl");
+		m_shaders["normalOnlyVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", "vs_5_1");
+		m_shaders["normalOnlyPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", "vs_5_1");
+
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -1156,6 +1195,62 @@ namespace Humpback
 		sm_PSO_desc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
 		sm_PSO_desc.NumRenderTargets = 0;
 		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&sm_PSO_desc, IID_PPV_ARGS(&m_psos["shadowMap"])));
+
+		// PSO for normal-depth pass.
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC normalDepthPsoDesc = opaquePsoDesc;
+		normalDepthPsoDesc.VS = 
+		{
+			reinterpret_cast<BYTE*>(m_shaders["normalOnlyVS"]->GetBufferPointer()),
+			m_shaders["normalOnlyVS"]->GetBufferSize()
+		};
+		normalDepthPsoDesc.PS = 
+		{
+			reinterpret_cast<BYTE*>(m_shaders["normalOnlyPS"]->GetBufferPointer()),
+			m_shaders["normalOnlyPS"]->GetBufferSize()
+		};
+		normalDepthPsoDesc.RTVFormats[0] = SSAO::NORMAL_DEPTH_FORMAT;
+		normalDepthPsoDesc.SampleDesc.Count = 1;
+		normalDepthPsoDesc.SampleDesc.Quality = 0;
+		normalDepthPsoDesc.DSVFormat = m_dsFormat;
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&normalDepthPsoDesc, IID_PPV_ARGS(&m_psos["normalDepth"])));
+		
+
+		// PSO for SSAO
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC ssaoPsoDesc = opaquePsoDesc;
+		ssaoPsoDesc.InputLayout = { nullptr, 0 };
+		ssaoPsoDesc.pRootSignature = m_rootSignatureSSAO.Get();
+		ssaoPsoDesc.VS = 
+		{
+			reinterpret_cast<byte*>(m_shaders["ssaoVS"]->GetBufferPointer()),
+			m_shaders["ssaoVS"]->GetBufferSize()
+		};
+		ssaoPsoDesc.PS = 
+		{
+			reinterpret_cast<byte*>(m_shaders["ssaoPS"]->GetBufferPointer()),
+			m_shaders["ssaoPS"]->GetBufferSize()
+		};
+
+		ssaoPsoDesc.DepthStencilState.DepthEnable = false;
+		ssaoPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		ssaoPsoDesc.RTVFormats[0] = SSAO::AMBIENT_FORMAT;
+		ssaoPsoDesc.SampleDesc.Count = 1;
+		ssaoPsoDesc.SampleDesc.Quality = 0;
+		ssaoPsoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&m_psos["ssao"])));
+
+		// PSO for blur pass.
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC blurPsoDesc = ssaoPsoDesc;
+		blurPsoDesc.VS =
+		{
+			reinterpret_cast<byte*>(m_shaders["blurVS"]->GetBufferPointer()),
+			m_shaders["blurVS"]->GetBufferSize()
+		};
+		blurPsoDesc.PS =
+		{
+			reinterpret_cast<byte*>(m_shaders["blurPS"]->GetBufferPointer()),
+			m_shaders["blurPS"]->GetBufferSize()
+		};
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&m_psos["blur"])));
 	}
 
 	void Renderer::_createRenderableObjects()
@@ -1212,57 +1307,6 @@ namespace Humpback
 		
 		m_renderLayers[(int)RenderLayer::Opaque].push_back(skullRitem.get());
 		m_renderableList.push_back(std::move(skullRitem));
-
-
-		// Instancing
-		// ----------------------------------------------------------------------------
-		/*auto skullRitem = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
-		skullRitem->texTrans = HMathHelper::Identity4x4();
-		skullRitem->cbIndex = 2;
-		skullRitem->material = m_materials["mat_skull"].get();
-		skullRitem->mesh = m_meshes["skullGeo"].get();
-		skullRitem->instanceCount = 0;
-		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
-		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
-		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
-		skullRitem->aabb = skullRitem->mesh->drawArgs["skull"].aabb;
-
-		int n = 5;
-		m_instanceCount = n * n * n;
-		skullRitem->instances.resize(m_instanceCount);
-		
-		float width = 200.0f;
-		float height = 200.0f;
-		float depth = 200.0f;
-
-		float x = -0.5f * width;
-		float y = -0.5f * height;
-		float z = -0.5f * depth;
-		float dx = width / (n - 1);
-		float dy = height / (n - 1);
-		float dz = depth / (n - 1);
-
-		for (size_t i = 0; i < n; i++)
-		{
-			for (size_t j = 0; j < n; j++)
-			{
-				for (size_t k = 0; k < n; k++)
-				{
-					int index = i * n * n + j * n + k;
-					skullRitem->instances[index].worldMatrix = XMFLOAT4X4(
-						1.0f, 0.0f, 0.0f, 0.0f,
-						0.0f, 1.0f, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f, 0.0f,
-						x + k * dx, y + j * dy, z + i * dz, 1.0f);
-					skullRitem->instances[index].materialIndex = 3;
-				}
-			}
-		}
-
-		m_renderableList.push_back(std::move(skullRitem));*/
-
-		// ------------------------------------------------------------------------------
 	}	
 
 	void Renderer::_createMaterialsData()
@@ -1399,24 +1443,21 @@ namespace Humpback
 		srvDesc.TextureCube.MostDetailedMip = 0;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
+
 		m_skyTexHeapIndex = tex2DList.size();
-		
 		m_shadowMapHeapIndex = tex2DList.size() + 1;
+		m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
+		m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
+		int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
+		int nullTexSrvIndex1 = nullCubeSrvIndex + 1;
+		int nullTexSrvIndex2 = nullTexSrvIndex1 + 1;
 
-		int nullCubeSrvIndex = m_shadowMapHeapIndex + 1;
-		int nullTexSrvIndex = nullCubeSrvIndex + 1;
+		auto nullSrv = _getCpuSrv(nullCubeSrvIndex);
+		m_nullSrv = _getGpuSrv(nullCubeSrvIndex);
 
-		auto srvCPUStart = m_srvHeap->GetCPUDescriptorHandleForHeapStart();
-		auto srvGPUStart = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
-		auto dsvCPUStart = m_dsvHeap->GetCPUDescriptorHandleForHeapStart();
-
-		auto nullSrv = CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCPUStart, nullCubeSrvIndex, m_cbvSrvUavDescriptorSize);
-		m_nullSrv = CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGPUStart, nullCubeSrvIndex, m_cbvSrvUavDescriptorSize);
-
-		// Create srv for null cube map.
 		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-
 		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvDesc.Texture2D.MostDetailedMip = 0;
@@ -1425,9 +1466,15 @@ namespace Humpback
 		// Create srv for null shadow map.
 		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
-		m_shadowMap->BuildDescriptors(CD3DX12_CPU_DESCRIPTOR_HANDLE(srvCPUStart, m_shadowMapHeapIndex, m_cbvSrvUavDescriptorSize),
-			CD3DX12_GPU_DESCRIPTOR_HANDLE(srvGPUStart, m_shadowMapHeapIndex, m_cbvSrvUavDescriptorSize),
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(dsvCPUStart, 1, m_dsvDescriptorSize));
+		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+
+		m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
+			_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
+
+		m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
+			_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),
+			_getRtv(Renderer::FrameBufferCount), m_cbvSrvUavDescriptorSize, m_rtvDescriptorSize);
 	}
 
 	void Renderer::_createFrameResources()

@@ -59,6 +59,7 @@ namespace Humpback
 		void _initD3D12();
 		void _initRendererFeatures();
 		void _initTimer();
+		void _initCamera();
 		void _createCommandObjects();
 		void _createSwapChain(IDXGIFactory4*);
 		void _createRtvAndDsvDescriptorHeaps();
@@ -81,8 +82,11 @@ namespace Humpback
 		
 		void _loadTextures();
 		void _createDescriptorHeaps();
-
 		void _updateTheViewport();
+		CD3DX12_CPU_DESCRIPTOR_HANDLE _getCpuSrv(int idx) const;
+		CD3DX12_GPU_DESCRIPTOR_HANDLE _getGpuSrv(int idx) const;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE _getDsv(int idx) const;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE _getRtv(int idx) const;
 
 
 		void _render();			// Render per frame.
@@ -99,6 +103,7 @@ namespace Humpback
 		void _updateInstanceData();
 		void _updateShadowMap();
 		void _onKeyboardInput();
+
 
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentBackBufferView();
 		D3D12_CPU_DESCRIPTOR_HANDLE _getCurrentDSBufferView();
@@ -179,6 +184,8 @@ namespace Humpback
 		int				m_skyTexHeapIndex = 0;
 		int				m_defaultNormalMapIndex = 0;
 		int				m_shadowMapHeapIndex = 0;
+		int				m_ssaoHeapIndexStart = 0;
+		int				m_ssaoAmbientMapIndex = 0;
 		CD3DX12_GPU_DESCRIPTOR_HANDLE	m_nullSrv;
 
 		XMFLOAT4X4		m_lightViewMatrix;

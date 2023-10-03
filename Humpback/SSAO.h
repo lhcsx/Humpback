@@ -25,12 +25,15 @@ namespace Humpback
 
 		void Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount);
 
+		void BuildDescriptors(ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
+			CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
+			unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize);
 		void RebuildDescriptors(ID3D12Resource* depthStencilBuffer);
 
-	private:
+		static const DXGI_FORMAT NORMAL_DEPTH_FORMAT = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		static const DXGI_FORMAT AMBIENT_FORMAT = DXGI_FORMAT_R16_UNORM;
 
-		const DXGI_FORMAT NORMAL_DEPTH_FORMAT = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		const DXGI_FORMAT AMBIENT_FORMAT = DXGI_FORMAT_R16_UNORM;
+	private:
 
 		void _setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes);
 		void _drawFullScreenQuad(ID3D12GraphicsCommandList* cmdList);
@@ -43,9 +46,7 @@ namespace Humpback
 		void _buildResources();
 		void _buildOffsetVectors();
 		void _buildRandomVectorTex(ID3D12GraphicsCommandList* cmdList);
-		void _buildDescriptors(ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
-			CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
-			unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize);
+		
 
 		ID3D12Device* m_device;
 
