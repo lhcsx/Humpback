@@ -67,6 +67,8 @@ namespace Humpback
 		_createFrameResources();
 		_createPso();
 
+		m_featureSSAO->SetPSOs(m_psos["ssao"].Get(), m_psos["blur"].Get());
+
 		ThrowIfFailed(m_commandList->Close());
 		ID3D12CommandList* commandLists[] = { m_commandList.Get() };
 		m_commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
@@ -167,10 +169,9 @@ namespace Humpback
 	void Renderer::_updateCBuffers()
 	{
 		_updateCBufferPerObject();
-		//_updateInstanceData();
 		_updateMatCBuffer();
 		_updateCBufferPerPass();
-		_UpdateShadowCB();
+		_updateShadowCB();
 	}
 
 	void Renderer::_updateCBufferPerObject()
@@ -201,24 +202,30 @@ namespace Humpback
 		XMMATRIX viewM = m_mainCamera->GetViewMatrix();
 		XMMATRIX projM = m_mainCamera->GetProjectionMatrix();
 		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
+		XMMATRIX invProjM = XMMatrixInverse(&XMMatrixDeterminant(projM), projM);
+		XMMATRIX invViewM = XMMatrixInverse(&XMMatrixDeterminant(viewM), viewM);
+		XMMATRIX invViewProjM = XMMatrixInverse(&XMMatrixDeterminant(viewProjM), viewProjM);
 
 		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_ShadowVPTMatrix);
-		XMStoreFloat4x4(&m_cbufferPerPass.viewM, XMMatrixTranspose(viewM));
-		XMStoreFloat4x4(&m_cbufferPerPass.projM, XMMatrixTranspose(projM));
-		XMStoreFloat4x4(&m_cbufferPerPass.viewProjM, XMMatrixTranspose(viewProjM));
-		XMStoreFloat4x4(&m_cbufferPerPass.shadowVPT, XMMatrixTranspose(shadowVPT));
-		m_cbufferPerPass.nearZ = m_mainCamera->GetNearZ();
-		m_cbufferPerPass.farZ = m_mainCamera->GetFarZ();
-		m_cbufferPerPass.cameraPosW = m_mainCamera->GetPosition();
-		m_cbufferPerPass.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
+		XMStoreFloat4x4(&m_mainPassCB.viewM, XMMatrixTranspose(viewM));
+		XMStoreFloat4x4(&m_mainPassCB.projM, XMMatrixTranspose(projM));
+		XMStoreFloat4x4(&m_mainPassCB.viewProjM, XMMatrixTranspose(viewProjM));
+		XMStoreFloat4x4(&m_mainPassCB.shadowVPT, XMMatrixTranspose(shadowVPT));
+		XMStoreFloat4x4(&m_mainPassCB.invProjM, XMMatrixTranspose(invProjM));
+		XMStoreFloat4x4(&m_mainPassCB.invViewM, XMMatrixTranspose(invViewM));
+		XMStoreFloat4x4(&m_mainPassCB.invViewProjM, XMMatrixTranspose(invViewProjM));
+		m_mainPassCB.nearZ = m_mainCamera->GetNearZ();
+		m_mainPassCB.farZ = m_mainCamera->GetFarZ();
+		m_mainPassCB.cameraPosW = m_mainCamera->GetPosition();
+		m_mainPassCB.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
 
 		for (size_t i = 0; i < 3; i++)
 		{
-			m_cbufferPerPass.lights[i].direction = m_directionalLights[i].GetDirection();
-			m_cbufferPerPass.lights[i].strength = m_directionalLights[i].GetIntensity();
+			m_mainPassCB.lights[i].direction = m_directionalLights[i].GetDirection();
+			m_mainPassCB.lights[i].strength = m_directionalLights[i].GetIntensity();
 		}
 		
-		m_curFrameResource->passCBuffer->CopyData(0, m_cbufferPerPass);
+		m_curFrameResource->passCBuffer->CopyData(0, m_mainPassCB);
 	}
 
 	void Renderer::_updateMatCBuffer()
@@ -248,7 +255,7 @@ namespace Humpback
 		}
 	}
 
-	void Renderer::_UpdateShadowCB()
+	void Renderer::_updateShadowCB()
 	{
 		XMMATRIX lightView = XMLoadFloat4x4(&m_lightViewMatrix);
 		XMMATRIX lightProj = XMLoadFloat4x4(&m_lightProjMatrix);
@@ -263,45 +270,41 @@ namespace Humpback
 		m_curFrameResource->passCBuffer->CopyData(1, m_shadowPassCB);
 	}
 
-	void Renderer::_updateInstanceData()
+	void Renderer::_updateSsaoCB()
 	{
-		//auto currentInstanceBuffer = m_curFrameResource->instanceBuffer.get();
+		SSAOConstants constants;
+		
+		constants.projM = m_mainPassCB.projM;
+		constants.invProjM = m_mainPassCB.invProjM;
 
-		//BoundingFrustum& mainCamFrustum = m_mainCamera->GetFrustum();
+		XMMATRIX texM(
+			0.5f, 0.0f, 0.0f, 0.0f,
+			0.0f, -0.5f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.5f, 0.5f, 0.0f, 1.0f);
 
-		//XMMATRIX view = m_mainCamera->GetViewMatrix();
-		//XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+		XMMATRIX p = m_mainCamera->GetProjectionMatrix();
+		XMStoreFloat4x4(&constants.projTexM, XMMatrixTranspose(p * texM));
 
-		//int visibleInstanceCount = 0;
-		//for (auto& e: m_renderableList)
-		//{
-		//	// Each group of instances.
+		m_featureSSAO->GetOffsetVectors(constants.offectVectors);
 
-		//	const auto& instanceData = e->instances;
-		//	for (size_t i = 0; i < instanceData.size(); i++)
-		//	{
-		//		// Each instance.
+		auto weights = m_featureSSAO->GetWeights(2.5f);
+		constants.weights[0] = XMFLOAT4(&weights[0]);
+		constants.weights[1] = XMFLOAT4(&weights[4]);
+		constants.weights[2] = XMFLOAT4(&weights[8]);
 
-		//		XMMATRIX world = XMLoadFloat4x4(&instanceData[i].worldMatrix);
-		//		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(world), world);
+		float aoTextureWidth = m_featureSSAO->GetAOTextureWidth();
+		float aoTextureHeight = m_featureSSAO->GetAOTextureHeight();
 
-		//		XMMATRIX viewToLocal = XMMatrixMultiply(invView, invWorld);
+		constants.PixelSize = XMFLOAT2(1.0 / aoTextureWidth, 1.0 / aoTextureHeight);
 
-		//		BoundingFrustum instanceLocalSpaceFrustum;
-		//		mainCamFrustum.Transform(instanceLocalSpaceFrustum, viewToLocal);
+		constants.radius = 0.5f;
+		constants.occlusionFadeStart = 0.2f;
+		constants.occlusionFadeEnd = 1.0f;
+		constants.surfaceEpsilon = 0.05f;
 
-		//		if (instanceLocalSpaceFrustum.Contains(e->aabb) || m_enableFrustumCulling == false)
-		//		{
-		//			InstanceData data;
-		//			XMStoreFloat4x4(&data.worldMatrix, XMMatrixTranspose(world));
-		//			data.materialIndex = instanceData[i].materialIndex;
-
-		//			currentInstanceBuffer->CopyData(visibleInstanceCount++, data);
-		//		}
-		//	}
-
-		//	e->instanceCount = visibleInstanceCount;
-		//}
+		auto curSsaoCB = m_curFrameResource->ssaoCBuffer.get();
+		curSsaoCB->CopyData(0, constants);
 	}
 
 	void Renderer::_updateShadowMap()

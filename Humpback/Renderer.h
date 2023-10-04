@@ -98,9 +98,9 @@ namespace Humpback
 		void _updateCBuffers();
 		void _updateCBufferPerObject();
 		void _updateCBufferPerPass();
+		void _updateShadowCB();
+		void _updateSsaoCB();
 		void _updateMatCBuffer();
-		void _UpdateShadowCB();
-		void _updateInstanceData();
 		void _updateShadowMap();
 		void _onKeyboardInput();
 
@@ -174,7 +174,7 @@ namespace Humpback
 		std::vector<RenderableObject*>								m_renderLayers[(int)RenderLayer::Count];
 		DirectX::BoundingSphere										m_sceneBoundingSphere;
 
-		PassConstants												m_cbufferPerPass;
+		PassConstants												m_mainPassCB;
 		PassConstants												m_shadowPassCB;
 
 		unsigned int	m_instanceCount = 0;

@@ -131,6 +131,46 @@ namespace Humpback
 		m_device->CreateRenderTargetView(m_SSAOTexture1.Get(), &rtvDesc, m_SSAOTex1CPURtv);
 	}
 
+	void SSAO::GetOffsetVectors(DirectX::XMFLOAT4 offsets[])
+	{
+		std::copy(&m_offsets[0], &m_offsets[14], &offsets[0]);
+	}
+
+	std::vector<float> SSAO::GetWeights(float sigma)
+	{
+		int blurRadius = (int)ceil(2.0f * sigma);
+
+		std::vector<float> weights;
+		weights.resize(2 * blurRadius + 1);
+
+		float sum = .0f;
+		float sigma2 = 2.0f * sigma * sigma;
+		for (int i = -blurRadius; i < blurRadius; i++)
+		{
+			float x = (float)i;
+			weights[i + blurRadius] = expf(-x * x / sigma2);
+			sum += weights[i + blurRadius];
+		}
+
+		// Normalize.
+		for (int i = 0; i < weights.size(); i++)
+		{
+			weights[i] /= sum;
+		}
+
+		return weights;
+	}
+
+	float SSAO::GetAOTextureWidth()
+	{
+		return m_width;
+	}
+
+	float SSAO::GetAOTextureHeight()
+	{
+		return m_height;
+	}
+
 	void SSAO::_setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes)
 	{
 		cmdList->RSSetViewports(1, &m_viewPort);

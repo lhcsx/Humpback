@@ -33,6 +33,11 @@ namespace Humpback
 		static const DXGI_FORMAT NORMAL_DEPTH_FORMAT = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		static const DXGI_FORMAT AMBIENT_FORMAT = DXGI_FORMAT_R16_UNORM;
 
+		void GetOffsetVectors(DirectX::XMFLOAT4 offsets[]);
+		std::vector<float> GetWeights(float sigma);
+		float GetAOTextureWidth();
+		float GetAOTextureHeight();
+
 	private:
 
 		void _setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes);
