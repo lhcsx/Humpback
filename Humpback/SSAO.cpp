@@ -171,6 +171,16 @@ namespace Humpback
 		return m_height;
 	}
 
+	ID3D12Resource* SSAO::GetNormalDepthResource()
+	{
+		return m_normalDepthTexture.Get();
+	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE SSAO::GetNormalRTV()
+	{
+		return m_normalDepthCpuRtv;
+	}
+
 	void SSAO::_setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes)
 	{
 		cmdList->RSSetViewports(1, &m_viewPort);

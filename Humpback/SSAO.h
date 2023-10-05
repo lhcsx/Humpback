@@ -23,6 +23,13 @@ namespace Humpback
 		void OnResize(unsigned int newWidth, unsigned int newHeight);
 		void ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount);
 
+		void GetOffsetVectors(DirectX::XMFLOAT4 offsets[]);
+		std::vector<float> GetWeights(float sigma);
+		float GetAOTextureWidth();
+		float GetAOTextureHeight();
+		ID3D12Resource* GetNormalDepthResource();
+		CD3DX12_CPU_DESCRIPTOR_HANDLE GetNormalRTV();
+
 		void Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount);
 
 		void BuildDescriptors(ID3D12Resource* depthStencilBuffer, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuSrv,
@@ -33,10 +40,7 @@ namespace Humpback
 		static const DXGI_FORMAT NORMAL_DEPTH_FORMAT = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		static const DXGI_FORMAT AMBIENT_FORMAT = DXGI_FORMAT_R16_UNORM;
 
-		void GetOffsetVectors(DirectX::XMFLOAT4 offsets[]);
-		std::vector<float> GetWeights(float sigma);
-		float GetAOTextureWidth();
-		float GetAOTextureHeight();
+
 
 	private:
 

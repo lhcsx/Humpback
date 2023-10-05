@@ -92,6 +92,7 @@ namespace Humpback
 		void _render();			// Render per frame.
 		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);
 		void _renderShadowMap();
+		void _renderNormalDepth();
 
 		void _update();			// Update per frame.
 		void _updateCamera();

@@ -172,6 +172,7 @@ namespace Humpback
 		_updateMatCBuffer();
 		_updateCBufferPerPass();
 		_updateShadowCB();
+		_updateSsaoCB();
 	}
 
 	void Renderer::_updateCBufferPerObject()
@@ -370,6 +371,13 @@ namespace Humpback
 		// Shadow map pass.
 		_renderShadowMap();
 
+		// Normal depth pass.
+		_renderNormalDepth();
+
+		// Generate AO.
+		// TODO
+		
+
 		auto backbufferView = _getCurrentBackBufferView();
 		auto dsView = _getCurrentDSBufferView();
 		m_commandList->OMSetRenderTargets(1, &backbufferView, true, &dsView);
@@ -486,6 +494,35 @@ namespace Humpback
 
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
 			m_shadowMap->Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	void Renderer::_renderNormalDepth()
+	{
+		m_commandList->RSSetViewports(1, &m_viewPort);
+		m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_featureSSAO->GetNormalDepthResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+		float clearValue[] = { 0.0f, 0.0f, 1.0f, 0.0f };
+		m_commandList->ClearRenderTargetView(m_featureSSAO->GetNormalRTV(), clearValue, 0, nullptr);
+
+		m_commandList->ClearDepthStencilView(_getCurrentDSBufferView(),
+			D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+		m_commandList->OMSetRenderTargets(1, &m_featureSSAO->GetNormalRTV(), true, &_getCurrentDSBufferView());
+
+		// Bind normal-depth only pass constants.
+		// todo
+		auto passCB = m_curFrameResource->passCBuffer->Resource();
+		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		m_commandList->SetPipelineState(m_psos["normalDepth"].Get());
+
+		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
+
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+			m_featureSSAO->GetNormalDepthResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
 	void Renderer::OnResize()
