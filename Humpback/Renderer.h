@@ -88,11 +88,13 @@ namespace Humpback
 		CD3DX12_CPU_DESCRIPTOR_HANDLE _getDsv(int idx) const;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE _getRtv(int idx) const;
 
+		void _bindMaterialBuffer();
 
 		void _render();			// Render per frame.
 		void _renderRenderableObjects(ID3D12GraphicsCommandList*, const std::vector<RenderableObject*>&);
 		void _renderShadowMap();
 		void _renderNormalDepth();
+		void _renderAO();
 
 		void _update();			// Update per frame.
 		void _updateCamera();

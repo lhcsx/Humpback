@@ -51,6 +51,11 @@ namespace Humpback
 
 	void SSAO::ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount)
 	{
+		if (cmdList == nullptr || curFrame == nullptr || blurCount < 1)
+		{
+			return;
+		}
+
 		cmdList->RSSetViewports(1, &m_viewPort);
 		cmdList->RSSetScissorRects(1, &m_scissorRect);
 

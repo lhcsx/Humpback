@@ -166,6 +166,12 @@ namespace Humpback
 		return rtv;
 	}
 
+	void Renderer::_bindMaterialBuffer()
+	{
+		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
+		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+	}
+
 	void Renderer::_updateCBuffers()
 	{
 		_updateCBufferPerObject();
@@ -360,8 +366,7 @@ namespace Humpback
 
 		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 		
-		auto matBuffer = m_curFrameResource->materialCBuffer->Resource();
-		m_commandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+		_bindMaterialBuffer();
 
 		m_commandList->SetGraphicsRootDescriptorTable(3, m_nullSrv);
 
@@ -375,8 +380,13 @@ namespace Humpback
 		_renderNormalDepth();
 
 		// Generate AO.
-		// TODO
-		
+		_renderAO();
+
+
+		// Main pass.
+		m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+		_bindMaterialBuffer();
 
 		auto backbufferView = _getCurrentBackBufferView();
 		auto dsView = _getCurrentDSBufferView();
@@ -392,6 +402,8 @@ namespace Humpback
 		m_commandList->ClearRenderTargetView(_getCurrentBackBufferView(), Colors::DarkGray, 0, nullptr);
 		m_commandList->ClearDepthStencilView(_getCurrentDSBufferView(),
 			D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
 		// set skybox root descriptor.
 		CD3DX12_GPU_DESCRIPTOR_HANDLE skyDesHandle(m_srvHeap->GetGPUDescriptorHandleForHeapStart());
@@ -523,6 +535,12 @@ namespace Humpback
 
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
 			m_featureSSAO->GetNormalDepthResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	void Renderer::_renderAO()
+	{
+		m_commandList->SetGraphicsRootSignature(m_rootSignatureSSAO.Get());
+		m_featureSSAO->ComputeSSAO(m_commandList.Get(), m_curFrameResource, 3);
 	}
 
 	void Renderer::OnResize()
@@ -965,7 +983,7 @@ namespace Humpback
 	void Renderer::_initRendererFeatures()
 	{
 		m_shadowMap = std::make_unique<ShadowMap>(m_device.Get(), 2048, 2048);
-		m_featureSSAO = std::make_unique<SSAO>(m_width, m_height, m_device, m_commandList);
+		m_featureSSAO = std::make_unique<SSAO>(m_width, m_height, m_device.Get(), m_commandList.Get());
 	}
 
 	void Renderer::_createCommandObjects()
