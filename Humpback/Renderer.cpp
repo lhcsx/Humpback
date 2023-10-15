@@ -612,7 +612,11 @@ namespace Humpback
 
 		_updateTheViewport();
 
-		m_featureSSAO->RebuildDescriptors(m_depthStencilBuffer.Get());
+		if (m_featureSSAO != nullptr)
+		{
+			m_featureSSAO->OnResize(m_width, m_height);
+			m_featureSSAO->RebuildDescriptors(m_depthStencilBuffer.Get());
+		}
 
 		m_mainCamera->SetFrustum(0.25f * HMathHelper::PI, m_aspectRatio, 1.0f, 1000.0f);
 	}
@@ -1463,7 +1467,7 @@ namespace Humpback
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.NumDescriptors = 10;
+		srvHeapDesc.NumDescriptors = 18;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());

@@ -31,22 +31,7 @@ namespace Humpback
 
 	void SSAO::OnResize(unsigned int newWidth, unsigned int newHeight)
 	{
-		if (m_width != newWidth || m_height != newHeight)
-		{
-			m_viewPort.TopLeftX = .0f;
-			m_viewPort.TopLeftY = .0f;
-			m_viewPort.Width = newWidth / 2;
-			m_viewPort.Height = newHeight / 2;
-			m_viewPort.MinDepth = .0f;
-			m_viewPort.MaxDepth = 1.0f;
-
-			m_width = newWidth;
-			m_height = newHeight;
-
-			m_scissorRect = { 0, 0, (int)m_width / 2, (int)m_height / 2, };
-
-			_buildResources();
-		}
+		_onResize(newWidth, newHeight);
 	}
 
 	void SSAO::ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount)
@@ -391,7 +376,7 @@ namespace Humpback
 		CD3DX12_GPU_DESCRIPTOR_HANDLE hGpuSrv, CD3DX12_CPU_DESCRIPTOR_HANDLE hCpuRtv,
 		unsigned int cbvSrvUavDescriptorSize, unsigned int rtvDescriptorSize)
 	{
-		m_SSAOTex0CPUSrv = hCpuRtv;
+		m_SSAOTex0CPUSrv = hCpuSrv;
 		m_SSAOTex1CPUSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_normalDepthCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_depthTexCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
