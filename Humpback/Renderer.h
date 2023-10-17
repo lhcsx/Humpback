@@ -42,6 +42,9 @@ namespace Humpback
 		~Renderer();
 
 		static const unsigned int FrameBufferCount = 2;
+		
+		static std::string_view SHADER_MODEL_VERTEX;
+		static std::string_view SHADER_MODEL_FRAGMENT;
 
 		void Initialize();		// Initialize the rendering engine.
 		void OnResize();

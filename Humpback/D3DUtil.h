@@ -41,7 +41,7 @@ namespace Humpback
             const std::wstring& filename,
             const D3D_SHADER_MACRO* defines,
             const std::string& entrypoint,
-            const std::string& target);
+            const std::string_view target);
 
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetCommonStaticSamplers();
     };

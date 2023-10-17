@@ -68,7 +68,7 @@ float NDCDepth2ViewDepth(float ndcDepth)
 
 float EvaluateOcclusion(float zDistance)
 {
-    float occlusion = 0f;
+    float occlusion = 0;
     if(zDistance > _SurfaceEpsilon)
     {
         float fadeLength = _OcclusionFadeEnd - _OcclusionFadeStart;

@@ -28,6 +28,9 @@ namespace Humpback
 
 	extern const int FRAME_RESOURCE_COUNT = 3;
 
+	std::string_view Renderer::SHADER_MODEL_VERTEX = "vs_5_1";
+	std::string_view Renderer::SHADER_MODEL_FRAGMENT = "ps_5_1";
+
 	Renderer::Renderer(int width, int height, HWND hwnd) :
 		m_width(width), m_height(height), m_hwnd(hwnd), 
 		m_aspectRatio(static_cast<float>(m_width) / m_height), m_viewPort(0.f, 0.f, m_width, m_height),
@@ -1035,7 +1038,7 @@ namespace Humpback
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvDesc = {};
 		rtvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvDesc.NumDescriptors = FrameBufferCount;
+		rtvDesc.NumDescriptors = FrameBufferCount + 3;	// A normal map and two AO maps.
 		rtvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		rtvDesc.NodeMask = 0;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvDesc, IID_PPV_ARGS(&m_rtvHeap)));
@@ -1119,7 +1122,7 @@ namespace Humpback
 			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
 			0.0f, 0, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE);
 
-		const CD3DX12_STATIC_SAMPLER_DESC linearWrap(1,
+		const CD3DX12_STATIC_SAMPLER_DESC linearWrap(3,
 			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
 			D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -1154,30 +1157,30 @@ namespace Humpback
 
 		std::wstring shaderFullPath = GetAssetPath(L"\\shaders\\SimpleShader.hlsl");
 
-		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", "vs_5_1");
-		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", "ps_5_1");
+		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", Renderer::SHADER_MODEL_VERTEX);
+		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", Renderer::SHADER_MODEL_FRAGMENT);
 
 		std::wstring skyBoxShaderFullPath = GetAssetPath(L"\\shaders\\Sky.hlsl");
 
-		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", "vs_5_1");
-		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", "ps_5_1");
+		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 
 		std::wstring shadowMapShaderFullPath = GetAssetPath(L"\\shaders\\ShadowMap.hlsl");
 
-		m_shaders["shadowMapVS"] = D3DUtil::CompileShader(shadowMapShaderFullPath, nullptr, "VS", "vs_5_1");
+		m_shaders["shadowMapVS"] = D3DUtil::CompileShader(shadowMapShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
 
 		std::wstring ssaoShaderFullPath = GetAssetPath(L"\\shaders\\SSAO.hlsl");
 
-		m_shaders["ssaoVS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "VS", "vs_5_1");
-		m_shaders["ssaoPS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "PS", "vs_5_1");
+		m_shaders["ssaoVS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+		m_shaders["ssaoPS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 
 		std::wstring blurShaderFullPath = GetAssetPath(L"\\shaders\\Blur.hlsl");
-		m_shaders["blurVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", "vs_5_1");
-		m_shaders["blurPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", "vs_5_1");
+		m_shaders["blurVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+		m_shaders["blurPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 
 		std::wstring normalOnlyFullPath = GetAssetPath(L"\\shaders\\NormalOnly.hlsl");
-		m_shaders["normalOnlyVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", "vs_5_1");
-		m_shaders["normalOnlyPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", "vs_5_1");
+		m_shaders["normalOnlyVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+		m_shaders["normalOnlyPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 
 
 		m_inputLayout = {

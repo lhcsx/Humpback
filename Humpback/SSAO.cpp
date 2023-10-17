@@ -56,7 +56,7 @@ namespace Humpback
 		cmdList->SetGraphicsRootConstantBufferView(0, cBufferAddress);
 		cmdList->SetGraphicsRoot32BitConstant(1, 0, 0);
 
-		cmdList->SetGraphicsRootDescriptorTable(2, m_normalDepthGPUSrv);
+		cmdList->SetGraphicsRootDescriptorTable(2, m_normalGPUSrv);
 		cmdList->SetGraphicsRootDescriptorTable(3, m_randomVectorGPUSrv);
 
 		cmdList->SetPipelineState(m_SSAOPipelineState);
@@ -100,7 +100,7 @@ namespace Humpback
 		srvDesc.Format = NORMAL_DEPTH_FORMAT;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = 1;
-		m_device->CreateShaderResourceView(m_normalDepthTexture.Get(), &srvDesc, m_normalDepthCpuSrv);
+		m_device->CreateShaderResourceView(m_normalDepthTexture.Get(), &srvDesc, m_normalCpuSrv);
 
 		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		m_device->CreateShaderResourceView(depthStencilBuffer, &srvDesc, m_depthTexCpuSrv);
@@ -114,7 +114,7 @@ namespace Humpback
 		rtvDesc.Format = NORMAL_DEPTH_FORMAT;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Texture2D.PlaneSlice = 0;
-		m_device->CreateRenderTargetView(m_normalDepthTexture.Get(), &rtvDesc, m_normalDepthCpuRtv);
+		m_device->CreateRenderTargetView(m_normalDepthTexture.Get(), &rtvDesc, m_normalCpuRtv);
 
 		rtvDesc.Format = AMBIENT_FORMAT;
 		m_device->CreateRenderTargetView(m_SSAOTexture0.Get(), &rtvDesc, m_SSAOTex0CPURtv);
@@ -168,7 +168,7 @@ namespace Humpback
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE SSAO::GetNormalRTV()
 	{
-		return m_normalDepthCpuRtv;
+		return m_normalCpuRtv;
 	}
 
 	void SSAO::_setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes)
@@ -183,7 +183,7 @@ namespace Humpback
 		cmdList->SetGraphicsRootConstantBufferView(0, cbAdress);
 
 		cmdList->SetGraphicsRoot32BitConstant(1, 0, 0);
-		cmdList->SetGraphicsRootDescriptorTable(2, m_normalDepthGPUSrv);
+		cmdList->SetGraphicsRootDescriptorTable(2, m_normalGPUSrv);
 		cmdList->SetGraphicsRootDescriptorTable(3, m_randomVectorGPUSrv);
 
 		cmdList->SetPipelineState(m_SSAOPipelineState);
@@ -378,17 +378,17 @@ namespace Humpback
 	{
 		m_SSAOTex0CPUSrv = hCpuSrv;
 		m_SSAOTex1CPUSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
-		m_normalDepthCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_normalCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_depthTexCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_randomVectorCpuSrv = hCpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 
 		m_SSAOTex0GPUSrv = hGpuSrv;
 		m_SSAOTex1GPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
-		m_normalDepthGPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
+		m_normalGPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_depthTexGpuSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 		m_randomVectorGPUSrv = hGpuSrv.Offset(1, cbvSrvUavDescriptorSize);
 
-		m_normalDepthCpuRtv = hCpuRtv;
+		m_normalCpuRtv = hCpuRtv;
 		m_SSAOTex0CPURtv = hCpuRtv.Offset(1, rtvDescriptorSize);
 		m_SSAOTex1CPURtv = hCpuRtv.Offset(1, rtvDescriptorSize);
 
@@ -424,7 +424,7 @@ namespace Humpback
 
 		cmdList->OMSetRenderTargets(1, &outputRtv, true, nullptr);
 
-		cmdList->SetGraphicsRootDescriptorTable(2, m_normalDepthGPUSrv);
+		cmdList->SetGraphicsRootDescriptorTable(2, m_normalGPUSrv);
 
 		cmdList->SetGraphicsRootDescriptorTable(3, inputSrv); // Bind input texture.
 
