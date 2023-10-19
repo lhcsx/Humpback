@@ -34,7 +34,7 @@ namespace Humpback
 		_onResize(newWidth, newHeight);
 	}
 
-	void SSAO::ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount)
+	void SSAO::Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount)
 	{
 		if (cmdList == nullptr || curFrame == nullptr || blurCount < 1)
 		{
@@ -72,26 +72,6 @@ namespace Humpback
 		_doBlur(cmdList, blurCount, curFrame);
 	}
 
-	void SSAO::Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount)
-	{
-		if (cmdList == nullptr)
-		{
-			return;
-		}
-
-		_setUp(cmdList, pCurFrameRes);
-		
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		
-		_drawFullScreenQuad(cmdList);
-
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-
-		_doBlur(cmdList, blurCount, pCurFrameRes);
-	}
-
 	void SSAO::RebuildDescriptors(ID3D12Resource* depthStencilBuffer)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -100,7 +80,7 @@ namespace Humpback
 		srvDesc.Format = NORMAL_DEPTH_FORMAT;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = 1;
-		m_device->CreateShaderResourceView(m_normalDepthTexture.Get(), &srvDesc, m_normalCpuSrv);
+		m_device->CreateShaderResourceView(m_normalTexture.Get(), &srvDesc, m_normalCpuSrv);
 
 		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		m_device->CreateShaderResourceView(depthStencilBuffer, &srvDesc, m_depthTexCpuSrv);
@@ -114,7 +94,7 @@ namespace Humpback
 		rtvDesc.Format = NORMAL_DEPTH_FORMAT;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Texture2D.PlaneSlice = 0;
-		m_device->CreateRenderTargetView(m_normalDepthTexture.Get(), &rtvDesc, m_normalCpuRtv);
+		m_device->CreateRenderTargetView(m_normalTexture.Get(), &rtvDesc, m_normalCpuRtv);
 
 		rtvDesc.Format = AMBIENT_FORMAT;
 		m_device->CreateRenderTargetView(m_SSAOTexture0.Get(), &rtvDesc, m_SSAOTex0CPURtv);
@@ -161,9 +141,9 @@ namespace Humpback
 		return m_height;
 	}
 
-	ID3D12Resource* SSAO::GetNormalDepthResource()
+	ID3D12Resource* SSAO::GetNormalResource()
 	{
-		return m_normalDepthTexture.Get();
+		return m_normalTexture.Get();
 	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE SSAO::GetNormalRTV()
@@ -229,7 +209,7 @@ namespace Humpback
 
 	void SSAO::_buildResources()
 	{
-		m_normalDepthTexture = nullptr;
+		m_normalTexture = nullptr;
 		m_SSAOTexture0 = nullptr;
 		m_SSAOTexture1 = nullptr;
 
@@ -252,7 +232,7 @@ namespace Humpback
 		CD3DX12_CLEAR_VALUE optClear(NORMAL_DEPTH_FORMAT, normalDepthClearVal);
 		ThrowIfFailed(m_device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE, &texDesc, D3D12_RESOURCE_STATE_GENERIC_READ, &optClear,
-			IID_PPV_ARGS(&m_normalDepthTexture)));
+			IID_PPV_ARGS(&m_normalTexture)));
 
 		// AO texture.
 		texDesc.Width = m_width / 2;
@@ -410,7 +390,7 @@ namespace Humpback
 		}
 		else
 		{
-			output = m_SSAOTexture1.Get();
+			output = m_SSAOTexture0.Get();
 			inputSrv = m_SSAOTex1GPUSrv;
 			outputRtv = m_SSAOTex0CPURtv;
 			cmdList->SetGraphicsRoot32BitConstant(1, 0, 0);

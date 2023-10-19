@@ -21,13 +21,12 @@ namespace Humpback
 
 		void SetPSOs(ID3D12PipelineState* ssaoPSO, ID3D12PipelineState* blurPSO);
 		void OnResize(unsigned int newWidth, unsigned int newHeight);
-		void ComputeSSAO(ID3D12GraphicsCommandList* cmdList, FrameResource* curFrame, int blurCount);
 
 		void GetOffsetVectors(DirectX::XMFLOAT4 offsets[]);
 		std::vector<float> GetWeights(float sigma);
 		float GetAOTextureWidth();
 		float GetAOTextureHeight();
-		ID3D12Resource* GetNormalDepthResource();
+		ID3D12Resource* GetNormalResource();
 		CD3DX12_CPU_DESCRIPTOR_HANDLE GetNormalRTV();
 
 		void Execute(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes, int blurCount);
@@ -61,7 +60,7 @@ namespace Humpback
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_SSAOTexture0;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_SSAOTexture1;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_normalDepthTexture;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_normalTexture;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_randomVectorTex;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_randomVectorTexUpload;
 

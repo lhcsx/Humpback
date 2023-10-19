@@ -516,8 +516,8 @@ namespace Humpback
 		m_commandList->RSSetViewports(1, &m_viewPort);
 		m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_featureSSAO->GetNormalDepthResource(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_featureSSAO->GetNormalResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		float clearValue[] = { 0.0f, 0.0f, 1.0f, 0.0f };
 		m_commandList->ClearRenderTargetView(m_featureSSAO->GetNormalRTV(), clearValue, 0, nullptr);
@@ -537,13 +537,13 @@ namespace Humpback
 		_renderRenderableObjects(m_commandList.Get(), m_renderLayers[(int)RenderLayer::Opaque]);
 
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
-			m_featureSSAO->GetNormalDepthResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			m_featureSSAO->GetNormalResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
 	void Renderer::_renderAO()
 	{
 		m_commandList->SetGraphicsRootSignature(m_rootSignatureSSAO.Get());
-		m_featureSSAO->ComputeSSAO(m_commandList.Get(), m_curFrameResource, 3);
+		m_featureSSAO->Execute(m_commandList.Get(), m_curFrameResource, 3);
 	}
 
 	void Renderer::OnResize()
