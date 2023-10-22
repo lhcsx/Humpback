@@ -25,7 +25,7 @@ struct VertexOut
     nointerpolation uint matIdx : MATINDEX;
 };
 
-VertexOut VSMain(VertexIn vin, uint instanceID : SV_InstanceID)
+VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
 {
     VertexOut vout;
     
@@ -47,7 +47,7 @@ VertexOut VSMain(VertexIn vin, uint instanceID : SV_InstanceID)
     return vout;
 }
 
-float4 PSMain(VertexOut pin) : SV_Target
+float4 PS(VertexOut pin) : SV_Target
 {
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
@@ -61,13 +61,15 @@ float4 PSMain(VertexOut pin) : SV_Target
     
     float4 diffuse = _DiffuseMapArray[matData.diffuseMapIndex].Sample(_SamplerLinearWrap, pin.uv) * matData.albedo;
     
-    float3 ambient = _AmbientLight.rgb * diffuse.rgb;
     
     float shiniess = (1.0f - matData.roughness) * normalSample.a;
     Material mat = { diffuse, matData.fresnelR0, shiniess };
     float shadowFactor = CalShadowFactor(pin.shadowPosH);
     
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
+    
+    float3 ao = _SsaoMap.Sample(_SamplerLinearWrap, pin.uv).rgb;
+    float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
     
     float3 l = directLight + ambient;
     result = float4(l * 0.9, matData.albedo.a);

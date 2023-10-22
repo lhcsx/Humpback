@@ -1054,10 +1054,10 @@ namespace Humpback
 	void Renderer::_createRootSignature()
 	{
 		CD3DX12_DESCRIPTOR_RANGE texTable0;
-		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0);
+		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE texTable1;
-		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 2, 0);
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, 3, 0);
 
 		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
 
@@ -1151,37 +1151,28 @@ namespace Humpback
 
 	void Renderer::_createShadersAndInputLayout()
 	{
-		// TODO
-		// Optimize code.
-		// RegisterCode(fullpath, key);
-
 		std::wstring shaderFullPath = GetAssetPath(L"\\shaders\\SimpleShader.hlsl");
-
-		m_shaders["standardVS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "VSMain", Renderer::SHADER_MODEL_VERTEX);
-		m_shaders["opaquePS"] = D3DUtil::CompileShader(shaderFullPath, nullptr, "PSMain", Renderer::SHADER_MODEL_FRAGMENT);
+		_createVertexShader(shaderFullPath, "standardVS");
+		_createPixelShader(shaderFullPath, "opaquePS");
 
 		std::wstring skyBoxShaderFullPath = GetAssetPath(L"\\shaders\\Sky.hlsl");
-
-		m_shaders["skyBoxVS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
-		m_shaders["skyBoxPS"] = D3DUtil::CompileShader(skyBoxShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
+		_createVertexShader(skyBoxShaderFullPath, "skyBoxVS");
+		_createPixelShader(skyBoxShaderFullPath, "skyBoxPS");
 
 		std::wstring shadowMapShaderFullPath = GetAssetPath(L"\\shaders\\ShadowMap.hlsl");
-
-		m_shaders["shadowMapVS"] = D3DUtil::CompileShader(shadowMapShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+		_createVertexShader(shadowMapShaderFullPath, "shadowMapVS");
 
 		std::wstring ssaoShaderFullPath = GetAssetPath(L"\\shaders\\SSAO.hlsl");
-
-		m_shaders["ssaoVS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
-		m_shaders["ssaoPS"] = D3DUtil::CompileShader(ssaoShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
+		_createVertexShader(ssaoShaderFullPath, "ssaoVS");
+		_createPixelShader(ssaoShaderFullPath, "ssaoPS");
 
 		std::wstring blurShaderFullPath = GetAssetPath(L"\\shaders\\Blur.hlsl");
-		m_shaders["blurVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
-		m_shaders["blurPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
+		_createVertexShader(blurShaderFullPath, "blurVS");
+		_createPixelShader(blurShaderFullPath, "blurPS");
 
 		std::wstring normalOnlyFullPath = GetAssetPath(L"\\shaders\\NormalOnly.hlsl");
-		m_shaders["normalOnlyVS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
-		m_shaders["normalOnlyPS"] = D3DUtil::CompileShader(blurShaderFullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
-
+		_createVertexShader(normalOnlyFullPath, "normalOnlyVS");
+		_createPixelShader(normalOnlyFullPath, "normalOnlyPS");
 
 		m_inputLayout = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -1316,6 +1307,16 @@ namespace Humpback
 			m_shaders["blurPS"]->GetBufferSize()
 		};
 		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&m_psos["blur"])));
+	}
+
+	void Renderer::_createVertexShader(const std::wstring& fullPath, const std::string& shaderName)
+	{
+		m_shaders[shaderName] = D3DUtil::CompileShader(fullPath, nullptr, "VS", Renderer::SHADER_MODEL_VERTEX);
+	}
+
+	void Renderer::_createPixelShader(const std::wstring& fullPath, const std::string& shaderName)
+	{
+		m_shaders[shaderName] = D3DUtil::CompileShader(fullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 	}
 
 	void Renderer::_createRenderableObjects()

@@ -78,6 +78,8 @@ namespace Humpback
 		void _createRootSignature();
 		void _createRootSignatureSSAO();
 		void _createShadersAndInputLayout();
+		void _createVertexShader(const std::wstring& fullPath, const std::string& shaderName);
+		void _createPixelShader(const std::wstring& fullPath, const std::string& shaderName);
 		void _createPso();
 		void _createFrameResources();
 		void _createRenderableObjects();

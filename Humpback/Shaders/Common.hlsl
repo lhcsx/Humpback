@@ -73,7 +73,8 @@ cbuffer cbPass : register(b1)
 TextureCube _SkyCubeMap : register(t0);
 Texture2D _ShadowMap : register(t1);
 
-Texture2D _DiffuseMapArray[5] : register(t2);
+Texture2D _SsaoMap : register(t2);
+Texture2D _DiffuseMapArray[10] : register(t3);
 
 
 float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
