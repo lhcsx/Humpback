@@ -29,8 +29,6 @@ VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
 {
     VertexOut vout;
     
-    //InstanceData insData = gInstanceBuffer[instanceID];
-    
     // Transform to homogeneous clip space.
     float4 posW = mul(float4(vin.posL, 1.0f), _World);
     vout.posW = posW.xyz;
@@ -68,11 +66,11 @@ float4 PS(VertexOut pin) : SV_Target
     
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
     
-    float3 ao = _SsaoMap.Sample(_SamplerLinearWrap, pin.uv).rgb;
+    float ao = _SsaoMap.Sample(_SamplerLinearWrap, pin.uv).r;
     float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
     
     float3 l = directLight + ambient;
     result = float4(l * 0.9, matData.albedo.a);
-
+    
     return result;
 }

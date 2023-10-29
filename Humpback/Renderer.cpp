@@ -882,6 +882,22 @@ namespace Humpback
 
 			XMVECTOR p = XMLoadFloat3(&vertices[i].position);
 
+			XMVECTOR N = XMLoadFloat3(&vertices[i].normal);
+
+			// Build the tangent.
+			XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			if (fabsf(XMVectorGetX(XMVector3Dot(N, up))) < 1.0f - 0.001f)
+			{
+				XMVECTOR tangent = XMVector3Normalize(XMVector3Cross(up, N));
+				XMStoreFloat3(&vertices[i].tangent, tangent);
+			}
+			else
+			{
+				up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+				XMVECTOR tangent = XMVector3Normalize(XMVector3Cross(N, up));
+				XMStoreFloat3(&vertices[i].tangent, tangent);
+			}
+
 			vMin = XMVectorMin(p, vMin);
 			vMax = XMVectorMax(p, vMax);
 		}
@@ -1407,11 +1423,11 @@ namespace Humpback
 		auto skullMat = std::make_unique<Material>();
 		skullMat->name = "mat_skull";
 		skullMat->matCBIdx = 3;
-		skullMat->diffuseSrvHeapIndex = 2;
+		skullMat->diffuseSrvHeapIndex = 3;
 		skullMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
 		skullMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.7f, 0.8f, 1.0f);
 		skullMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		skullMat->roughness = 0.2f;
+		skullMat->roughness = 0.8f;
 
 
 		auto skyMat = std::make_unique<Material>();
