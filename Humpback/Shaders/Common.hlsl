@@ -90,7 +90,7 @@ float3 UnpackNormal(float3 normalMapSample, float3 unitNormalW, float3 tangentW)
     
     // Transform normal from TBN space to world sapce.
     float3x3 tbn2World = float3x3(T, B, N);
-    result = mul(normalMapSample, tbn2World);
+    result = mul(result, tbn2World);
     
     return result;
 }
