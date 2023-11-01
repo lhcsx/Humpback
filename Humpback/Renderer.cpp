@@ -955,7 +955,7 @@ namespace Humpback
 	{
 		m_directionalLights = std::make_unique<DirectionalLight[]>(3);
 		m_directionalLights[0].SetDirection(0.57735f, -0.57735f, 0.57735f);
-		m_directionalLights[0].SetIntensity(1.f, 1.f, 1.f);
+		m_directionalLights[0].SetIntensity(2.f, 2.f, 2.f);
 
 		m_directionalLights[1].SetDirection(-0.57735f, -0.57735f, 0.57735f);
 		m_directionalLights[1].SetIntensity(0.3f, 0.3f, 0.3f);

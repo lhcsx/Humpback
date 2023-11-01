@@ -114,10 +114,12 @@ float CalShadowFactor(float4 posH)
     
     float shadowFactor = 0.0f;
     
+    float bias = 0.004f;
+    
     [unroll]
     for (int i = 0; i < 9; ++i)
     {
-        shadowFactor += _ShadowMap.SampleCmpLevelZero(_SamplerShadow, posH.xy + offsets[i], posH.z).r;
+        shadowFactor += _ShadowMap.SampleCmpLevelZero(_SamplerShadow, posH.xy + offsets[i], posH.z - bias).r;
     }
 
     return shadowFactor / 9.0f;
