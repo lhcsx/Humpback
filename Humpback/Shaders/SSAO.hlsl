@@ -59,11 +59,10 @@ VSOut VS(uint vid: SV_VertexID)
 float NDCDepth2ViewDepth(float ndcDepth)
 {
     // depth in ndc equals a + (b / viewZ)
-    // a = _hb_invProj[2, 2]
-    // b = _hb_invProj[3, 2]
+    // a = _Proj[2][2]
+    // b = _Proj[3][2]
     
-    return _Proj[3, 2] / (ndcDepth - _Proj[2, 2]);
-
+    return _Proj[3][2] / (ndcDepth - _Proj[2][2]);
 }
 
 float EvaluateOcclusion(float zDistance)
