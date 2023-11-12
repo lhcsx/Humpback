@@ -57,6 +57,7 @@ cbuffer cbPass : register(b1)
     float4x4 _ViewProj;
     float4x4 _InvViewProj;
     float4x4 _ShadowVPT;
+    float4x4 _ViewProjTex;
     float3 _EyePosW;
     float _PerObjectPad1;
     float2 _RenderTargetSize;

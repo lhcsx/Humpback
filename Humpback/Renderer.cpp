@@ -209,21 +209,31 @@ namespace Humpback
 
 	void Renderer::_updateCBufferPerPass()
 	{
-		XMMATRIX viewM = m_mainCamera->GetViewMatrix();
-		XMMATRIX projM = m_mainCamera->GetProjectionMatrix();
-		XMMATRIX viewProjM = XMMatrixMultiply(viewM, projM);
-		XMMATRIX invProjM = XMMatrixInverse(&XMMatrixDeterminant(projM), projM);
-		XMMATRIX invViewM = XMMatrixInverse(&XMMatrixDeterminant(viewM), viewM);
-		XMMATRIX invViewProjM = XMMatrixInverse(&XMMatrixDeterminant(viewProjM), viewProjM);
-
+		XMMATRIX view = m_mainCamera->GetViewMatrix();
+		XMMATRIX proj = m_mainCamera->GetProjectionMatrix();
+		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+		XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
+		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+		XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_ShadowVPTMatrix);
-		XMStoreFloat4x4(&m_mainPassCB.viewM, XMMatrixTranspose(viewM));
-		XMStoreFloat4x4(&m_mainPassCB.projM, XMMatrixTranspose(projM));
-		XMStoreFloat4x4(&m_mainPassCB.viewProjM, XMMatrixTranspose(viewProjM));
+		
+		// TODO
+		// Move the t matrix into HMathHelper;
+		// Transform from NDC space to texture space.
+		XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f,
+			0.0f, -0.5f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.5f, 0.5f, 0.0f, 1.0f);
+		XMMATRIX viewProjTex = viewProj * T;
+
+		XMStoreFloat4x4(&m_mainPassCB.view, XMMatrixTranspose(view));
+		XMStoreFloat4x4(&m_mainPassCB.proj, XMMatrixTranspose(proj));
+		XMStoreFloat4x4(&m_mainPassCB.viewProj, XMMatrixTranspose(viewProj));
 		XMStoreFloat4x4(&m_mainPassCB.shadowVPT, XMMatrixTranspose(shadowVPT));
-		XMStoreFloat4x4(&m_mainPassCB.invProjM, XMMatrixTranspose(invProjM));
-		XMStoreFloat4x4(&m_mainPassCB.invViewM, XMMatrixTranspose(invViewM));
-		XMStoreFloat4x4(&m_mainPassCB.invViewProjM, XMMatrixTranspose(invViewProjM));
+		XMStoreFloat4x4(&m_mainPassCB.invProj, XMMatrixTranspose(invProj));
+		XMStoreFloat4x4(&m_mainPassCB.invView, XMMatrixTranspose(invView));
+		XMStoreFloat4x4(&m_mainPassCB.invViewProj, XMMatrixTranspose(invViewProj));
+		XMStoreFloat4x4(&m_mainPassCB.viewProjTex, XMMatrixTranspose(viewProjTex));
 		m_mainPassCB.nearZ = m_mainCamera->GetNearZ();
 		m_mainPassCB.farZ = m_mainCamera->GetFarZ();
 		m_mainPassCB.cameraPosW = m_mainCamera->GetPosition();
@@ -272,9 +282,9 @@ namespace Humpback
 
 		XMMATRIX lightVP = XMMatrixMultiply(lightView, lightProj);
 
-		XMStoreFloat4x4(&m_shadowPassCB.viewM, XMMatrixTranspose(lightView));
-		XMStoreFloat4x4(&m_shadowPassCB.projM, XMMatrixTranspose(lightProj));
-		XMStoreFloat4x4(&m_shadowPassCB.viewProjM, XMMatrixTranspose(lightVP));
+		XMStoreFloat4x4(&m_shadowPassCB.view, XMMatrixTranspose(lightView));
+		XMStoreFloat4x4(&m_shadowPassCB.proj, XMMatrixTranspose(lightProj));
+		XMStoreFloat4x4(&m_shadowPassCB.viewProj, XMMatrixTranspose(lightVP));
 		m_shadowPassCB.cameraPosW = m_mainLightPos;
 
 		m_curFrameResource->passCBuffer->CopyData(1, m_shadowPassCB);
@@ -284,8 +294,8 @@ namespace Humpback
 	{
 		SSAOConstants constants;
 		
-		constants.projM = m_mainPassCB.projM;
-		constants.invProjM = m_mainPassCB.invProjM;
+		constants.projM = m_mainPassCB.proj;
+		constants.invProjM = m_mainPassCB.invProj;
 
 		XMMATRIX texM(
 			0.5f, 0.0f, 0.0f, 0.0f,

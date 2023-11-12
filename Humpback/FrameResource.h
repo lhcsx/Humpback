@@ -41,13 +41,14 @@ namespace Humpback
 
 	struct PassConstants
 	{
-		DirectX::XMFLOAT4X4 viewM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 invViewM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 projM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 invProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 viewProjM = HMathHelper::Identity4x4();
-		DirectX::XMFLOAT4X4 invViewProjM = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 view = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invView = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 proj = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invProj = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 viewProj = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 invViewProj = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 shadowVPT = HMathHelper::Identity4x4();
+		DirectX::XMFLOAT4X4 viewProjTex = HMathHelper::Identity4x4();
 		DirectX::XMFLOAT3 cameraPosW = { .0f, .0f, .0f };
 		float cbPerObjectPad1 = 0.0f;
 		DirectX::XMFLOAT2 renderTargetSize = { .0f, .0f };

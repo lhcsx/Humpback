@@ -16,8 +16,9 @@ struct VertexIn
 struct VertexOut
 {
     float4 posH  : SV_POSITION;
-    float4 shadowPosH : POSITION0;
-    float3 posW : POSITION1;
+    float4 shadowPosCS : POSITION0;
+    float4 ssaoPosCS : POSITION1;
+    float3 posW : POSITION2;
     float3 normal : NORMAL;
     float2 uv : TEXCOORD;
     float3 tangent : TANGENT;
@@ -33,7 +34,8 @@ VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
     float4 posW = mul(float4(vin.posL, 1.0f), _World);
     vout.posW = posW.xyz;
     vout.posH = mul(posW, _ViewProj);
-    vout.shadowPosH = mul(posW, _ShadowVPT);
+    vout.shadowPosCS = mul(posW, _ShadowVPT);
+    vout.ssaoPosCS = mul(posW, _ViewProjTex);
     
     vout.tangent = mul(float4(vin.tangent, 0.0f), _World).xyz;
 
@@ -62,19 +64,18 @@ float4 PS(VertexOut pin) : SV_Target
     
     float shiniess = (1.0f - matData.roughness) * normalSample.a;
     Material mat = { diffuse, matData.fresnelR0, shiniess };
-    float shadowFactor = CalShadowFactor(pin.shadowPosH);
+    float shadowFactor = CalShadowFactor(pin.shadowPosCS);
     
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
     
-    float ao = _SsaoMap.Sample(_SamplerLinearWrap, pin.uv).r;
+    float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
+    float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
     float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
     
     float3 l = directLight + ambient;
     result = float4(l * 0.9, matData.albedo.a);
     
-    // TODO
-    // Need to fix ao sampling error.
-    //return float4(ao, ao, ao, 1);
+    return float4(ao, ao, ao, 1);
 
     return result;
 }
