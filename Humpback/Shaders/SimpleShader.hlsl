@@ -72,5 +72,9 @@ float4 PS(VertexOut pin) : SV_Target
     float3 l = directLight + ambient;
     result = float4(l * 0.9, matData.albedo.a);
     
+    // TODO
+    // Need to fix ao sampling error.
+    //return float4(ao, ao, ao, 1);
+
     return result;
 }

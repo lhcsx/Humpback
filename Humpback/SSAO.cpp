@@ -69,7 +69,7 @@ namespace Humpback
 		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		_doBlur(cmdList, blurCount, curFrame);
+		//_doBlur(cmdList, blurCount, curFrame);
 	}
 
 	void SSAO::RebuildDescriptors(ID3D12Resource* depthStencilBuffer)
@@ -84,6 +84,9 @@ namespace Humpback
 
 		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 		m_device->CreateShaderResourceView(depthStencilBuffer, &srvDesc, m_depthTexCpuSrv);
+
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateShaderResourceView(m_randomVectorTex.Get(), &srvDesc, m_randomVectorCpuSrv);
 
 		srvDesc.Format = AMBIENT_FORMAT;
 		m_device->CreateShaderResourceView(m_SSAOTexture0.Get(), &srvDesc, m_SSAOTex0CPUSrv);
@@ -150,26 +153,6 @@ namespace Humpback
 	{
 		return m_normalCpuRtv;
 	}
-
-	void SSAO::_setUp(ID3D12GraphicsCommandList* cmdList, FrameResource* pCurFrameRes)
-	{
-		cmdList->RSSetViewports(1, &m_viewPort);
-		cmdList->RSSetScissorRects(1, &m_scissorRect);
-		float clearColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		cmdList->ClearRenderTargetView(m_SSAOTex0CPUSrv, clearColor, 0, nullptr);
-
-		cmdList->OMSetRenderTargets(1, &m_SSAOTex0CPUSrv, true, nullptr);
-		auto cbAdress = pCurFrameRes->ssaoCBuffer->Resource()->GetGPUVirtualAddress();
-		cmdList->SetGraphicsRootConstantBufferView(0, cbAdress);
-
-		cmdList->SetGraphicsRoot32BitConstant(1, 0, 0);
-		cmdList->SetGraphicsRootDescriptorTable(2, m_normalGPUSrv);
-		cmdList->SetGraphicsRootDescriptorTable(3, m_randomVectorGPUSrv);
-
-		cmdList->SetPipelineState(m_SSAOPipelineState);
-	}
-
-
 
 	void SSAO::_doBlur(ID3D12GraphicsCommandList* cmdList, int blurCount, FrameResource* frameRes)
 	{

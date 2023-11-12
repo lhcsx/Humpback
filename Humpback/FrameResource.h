@@ -69,14 +69,14 @@ namespace Humpback
 		DirectX::XMFLOAT4X4 projTexM;
 
 		DirectX::XMFLOAT4 offectVectors[14];
+
 		DirectX::XMFLOAT4 weights[3];
+		DirectX::XMFLOAT2 PixelSize = { 0.0f, 0.0f };
 
 		float radius = 0.5f;
 		float surfaceEpsilon = 0.05f;
 		float occlusionFadeStart = 0.2f;
 		float occlusionFadeEnd = 2.0f;
-
-		DirectX::XMFLOAT2 PixelSize = { 0.0f, 0.0f };
 	};
 
 	class FrameResource

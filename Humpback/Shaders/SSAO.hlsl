@@ -7,8 +7,11 @@ cbuffer cbSSAO : register(b0)
     float4x4 _Proj;
     float4x4 _InvProj;
     float4x4 _ProjTex;
-    float4 _OffsetVecs[12];
+    float4 _OffsetVecs[14];
     
+    float4 _BlurWeights[3];
+    float2 _PixelSize;
+
     float _Radius;
     float _SurfaceEpsilon;
     float _OcclusionFadeStart;
@@ -33,7 +36,7 @@ static const float2 _TexCoords[6] =
     float2(1.0f, 1.0f)
 };
 
-static const int _SampleCount = 12;
+static const int _SampleCount = 14;
 
 struct VSOut
 {
