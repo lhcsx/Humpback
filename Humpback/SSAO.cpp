@@ -69,7 +69,7 @@ namespace Humpback
 		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_SSAOTexture0.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		//_doBlur(cmdList, blurCount, curFrame);
+		_doBlur(cmdList, blurCount, curFrame);
 	}
 
 	void SSAO::RebuildDescriptors(ID3D12Resource* depthStencilBuffer)

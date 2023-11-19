@@ -1313,7 +1313,7 @@ namespace Humpback
 			reinterpret_cast<byte*>(m_shaders["blurPS"]->GetBufferPointer()),
 			m_shaders["blurPS"]->GetBufferSize()
 		};
-		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&ssaoPsoDesc, IID_PPV_ARGS(&m_psos["blur"])));
+		ThrowIfFailed(m_device->CreateGraphicsPipelineState(&blurPsoDesc, IID_PPV_ARGS(&m_psos["blur"])));
 	}
 
 	void Renderer::_createVertexShader(const std::wstring& fullPath, const std::string& shaderName)

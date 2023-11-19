@@ -66,6 +66,7 @@ float4 PS(VertexOut pin) : SV_Target
     Material mat = { diffuse, matData.fresnelR0, shiniess };
     float shadowFactor = CalShadowFactor(pin.shadowPosCS);
     
+    
     float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
     
     float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
@@ -73,9 +74,10 @@ float4 PS(VertexOut pin) : SV_Target
     float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
     
     float3 l = directLight + ambient;
-    result = float4(l * 0.9, matData.albedo.a);
     
-    return float4(ao, ao, ao, 1);
+    //return float4(ao, ao, ao, 1);
+    
+    return float4(l, 1);
 
     return result;
 }

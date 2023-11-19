@@ -4,16 +4,19 @@
 
 cbuffer cbSSAO : register(b0)
 {
-    float4x4 _ViewToProj;
-    float4x4 _ProjToView;
-    float4 _OffsetVectors[14];
+    float4x4 _Proj;
+    float4x4 _InvProj;
+    float4x4 _ProjTex;
+    float4 _OffsetVecs[14];
+    
     float4 _BlurWeights[3];
     float2 _PixelSize;
-    float _OcclusionRadius;
+
+    float _Radius;
+    float _SurfaceEpsilon;
     float _OcclusionFadeStart;
     float _OcclusionFadeEnd;
-    float __SurfaceEpsilon;
-};
+}
 
 cbuffer cbRootConstants : register(b1)
 {
@@ -61,8 +64,7 @@ VertexOut VS(uint vid : SV_VertexID)
 float NDC2LinearDepth(float ndcDepth)
 {
     // ndcDepth = A + B / linearDepth, where A = _ViewToProj[2][2], B = _ViewToProj[3][2].
-    float linearDepth = _ViewToProj[3][2] / (ndcDepth - _ViewToProj[2][2]);
-    return linearDepth;
+    return _Proj[3][2] / (ndcDepth - _Proj[2][2]);
 }
 
 
