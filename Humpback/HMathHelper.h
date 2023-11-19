@@ -23,6 +23,16 @@ namespace Humpback
 			);
 		}
 
+		static DirectX::XMFLOAT4X4 NDCToTexCoord()
+		{
+			return DirectX::XMFLOAT4X4(
+				0.5f, 0.0f, 0.0f, 0.0f,
+				0.0f, -0.5f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.5f, 0.5f, 0.0f, 1.0f
+			);
+		}
+
 		template<typename T>
 		static T Clamp(const T& x, const T& low, const T& high)
 		{

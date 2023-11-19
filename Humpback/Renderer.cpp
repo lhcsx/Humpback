@@ -217,14 +217,7 @@ namespace Humpback
 		XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
 		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_ShadowVPTMatrix);
 		
-		// TODO
-		// Move the t matrix into HMathHelper;
-		// Transform from NDC space to texture space.
-		XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f,
-			0.0f, -0.5f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.0f, 1.0f);
-		XMMATRIX viewProjTex = viewProj * T;
+		XMMATRIX viewProjTex = viewProj * DirectX::XMLoadFloat4x4(&HMathHelper::NDCToTexCoord());
 
 		XMStoreFloat4x4(&m_mainPassCB.view, XMMatrixTranspose(view));
 		XMStoreFloat4x4(&m_mainPassCB.proj, XMMatrixTranspose(proj));
@@ -297,14 +290,8 @@ namespace Humpback
 		constants.projM = m_mainPassCB.proj;
 		constants.invProjM = m_mainPassCB.invProj;
 
-		XMMATRIX texM(
-			0.5f, 0.0f, 0.0f, 0.0f,
-			0.0f, -0.5f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.0f, 1.0f);
-
 		XMMATRIX p = m_mainCamera->GetProjectionMatrix();
-		XMStoreFloat4x4(&constants.projTexM, XMMatrixTranspose(p * texM));
+		XMStoreFloat4x4(&constants.projTexM, XMMatrixTranspose(p * XMLoadFloat4x4(&HMathHelper::NDCToTexCoord())));
 
 		m_featureSSAO->GetOffsetVectors(constants.offectVectors);
 
@@ -351,13 +338,7 @@ namespace Humpback
 
 		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(l, r, b, u, n, f);
 
-		// Transform from NDC space to texture space.
-		XMMATRIX T(0.5f, 0.0f, 0.0f, 0.0f,
-			0.0f, -0.5f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.0f, 1.0f);
-
-		XMMATRIX VPT = lightView * lightProj * T;
+		XMMATRIX VPT = lightView * lightProj * XMLoadFloat4x4(&HMathHelper::NDCToTexCoord());
 		XMStoreFloat4x4(&m_lightViewMatrix, lightView);
 		XMStoreFloat4x4(&m_lightProjMatrix, lightProj);
 		XMStoreFloat4x4(&m_ShadowVPTMatrix,  VPT);
