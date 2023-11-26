@@ -67,16 +67,15 @@ float4 PS(VertexOut pin) : SV_Target
     float shadowFactor = CalShadowFactor(pin.shadowPosCS);
     
     
-    float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor);
-    
     float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
     float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
+    
+    float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor) * saturate(ao + 0.2);
+    
     float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
     
     float3 l = directLight + ambient;
-    
-    //return float4(ao, ao, ao, 1);
-    
+        
     return float4(l, 1);
 
     return result;
