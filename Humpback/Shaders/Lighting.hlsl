@@ -2,6 +2,9 @@
 // 2022-12-04
 
 
+#include "BRDF.hlsl"
+
+
 #define MaxLights 16
 
 
@@ -68,5 +71,42 @@ float3 ComputeLighting(Light _Lights[MaxLights], Material mat,
     Light dirLight = _Lights[0];
     result = shadowFactor * ComputeDirectionLight(dirLight, mat, normal, eyeDir);
 
+
+
 	return result;
 }
+
+float DirectBRDFSpecular(BRDFData brdfData, float3 normalWS, float3 lightDirectionWS, float3 viewDirectionWS)
+{
+    float3 halfVec = normalize(lightDirectionWS + viewDirectionWS);
+    float NoH = saturate(dot(normalWS, halfVec));
+    float LoH = saturate(dot(lightDirectionWS, halfVec));
+
+    // GGX Distribution multiplied by combined approximation of Visibility and Fresnel
+    // BRDFspec = (D * V * F) / 4.0
+    // D = roughness^2 / ( NoH^2 * (roughness^2 - 1) + 1 )^2
+    // V * F = 1.0 / ( LoH^2 * (roughness + 0.5) )
+    float D = brdfData.roughness2 / pow(( (NoH * NoH * (brdfData.roughness2 - 1.0) + 1.0) ), 2);
+    float VF = 1.0 / (LoH * LoH * (brdfData.roughness + 0.5));
+    
+    float specularTerm = (D * VF) / 4.0;
+
+    return specularTerm;
+}
+
+float3 LightingPhysicallyBased(BRDFData brdfData, Light mainLight, float lightAttenuation, float3 normalWS, float3 viewDirectionWS)
+{
+    float3 lightDirectionWS = mainLight.direction;
+    float3 lightColor = mainLight.strength;
+
+    float NdotL = saturate(dot(normalWS, lightDirectionWS));
+
+    float3 radiance = lightColor * lightAttenuation * NdotL;
+
+    float3 brdf = brdfData.diffuse;
+
+    brdf += brdfData.specular * DirectBRDFSpecular(brdfData, normalWS, lightDirectionWS, viewDirectionWS);
+
+    return brdf * radiance;
+}
+

@@ -518,8 +518,6 @@ namespace Humpback
 
 		m_commandList->OMSetRenderTargets(1, &m_featureSSAO->GetNormalRTV(), true, &_getCurrentDSBufferView());
 
-		// Bind normal-depth only pass constants.
-		// todo
 		auto passCB = m_curFrameResource->passCBuffer->Resource();
 		m_commandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
@@ -1161,6 +1159,10 @@ namespace Humpback
 		std::wstring shaderFullPath = GetAssetPath(L"\\shaders\\SimpleShader.hlsl");
 		_createVertexShader(shaderFullPath, "standardVS");
 		_createPixelShader(shaderFullPath, "opaquePS");
+
+		std::wstring normalOnlyFullPath = GetAssetPath(L"\\shaders\\StandardPBR.hlsl");
+		_createVertexShader(normalOnlyFullPath, "standard_pbr_vs");
+		_createPixelShader(normalOnlyFullPath, "standard_pbr_ps");
 
 		std::wstring skyBoxShaderFullPath = GetAssetPath(L"\\shaders\\Sky.hlsl");
 		_createVertexShader(skyBoxShaderFullPath, "skyBoxVS");
