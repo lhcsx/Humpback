@@ -49,10 +49,19 @@ VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
 
 float4 PS(VertexOut pin) : SV_Target
 {
+    MaterialData matData = _MaterialDataBuffer[pin.matIdx];
+
+
+    float3 albedo = matData.albedo;
+    float smoothness = 1.0 - matData.roughness;
+    // TODO
+    // float metallic = ;
+    // BRDFData brdfData = InitializeBRDFData(albedo, metallic, smoothness);
+    // float3 light = LightingPhysicallyBased()
+
     float4 result = 1.0;
     pin.normal = normalize(pin.normal);
     
-    MaterialData matData = _MaterialDataBuffer[pin.matIdx];
     
     float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
     normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);

@@ -7,6 +7,8 @@
 
 #define MaxLights 16
 
+#define kDielectricSpec float4(0.04, 0.04, 0.04, 1.0 - 0.04)
+
 
 struct Light
 {
@@ -110,3 +112,39 @@ float3 LightingPhysicallyBased(BRDFData brdfData, Light mainLight, float lightAt
     return brdf * radiance;
 }
 
+float OneMinusReflectivityMetallic(float1 metallic)
+{
+    // TODO : Implementation.
+    return 1.0;
+}
+
+float PerceptualSmoothnessToPerceptualRoughness(float smoothness)
+{
+    // TODO : Implementation.
+    return 1.0;
+}
+
+float PerceptualRoughnessToRoughness(float perceptualRoughness)
+{
+    // TODO : Implementation.
+    return 1.0;
+}
+
+BRDFData InitializeBRDFData(float3 albedo, float metallic, float smoothness)
+{
+    BRDFData brdfData;
+
+    float oneMinusReflectivity = OneMinusReflectivityMetallic(metallic);
+    float reflectivity = 1.0 - oneMinusReflectivity;
+    brdfData.diffuse = albedo * oneMinusReflectivity;
+    brdfData.specular = lerp(kDielectricSpec.rgb, albedo, metallic);
+
+    brdfData.perceptualRoughness = PerceptualSmoothnessToPerceptualRoughness(smoothness);
+    brdfData.roughness = PerceptualRoughnessToRoughness(brdfData.perceptualRoughness);
+    brdfData.roughness2 = brdfData.roughness * brdfData.roughness;
+    brdfData.grazingTerm = saturate(smoothness + reflectivity);
+    brdfData.normalizationTerm = brdfData.roughness * 4.0 + 2.0;
+    brdfData.roughness2MinusOne = brdfData.roughness2 - 1.0;
+
+    return brdfData;
+}

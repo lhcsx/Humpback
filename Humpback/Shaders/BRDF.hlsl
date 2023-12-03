@@ -9,6 +9,9 @@ struct BRDFData
     float3 specular;
     float roughness;
     float roughness2;
-
     float roughness2MinusOne;
+    float perceptualRoughness;
+
+    float grazingTerm;
+    float normalizationTerm;
 };
