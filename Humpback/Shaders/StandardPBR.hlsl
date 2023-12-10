@@ -54,38 +54,20 @@ float4 PS(VertexOut pin) : SV_Target
 
     float3 albedo = matData.albedo;
     float smoothness = 1.0 - matData.roughness;
-    // TODO
-    // float metallic = ;
-    // BRDFData brdfData = InitializeBRDFData(albedo, metallic, smoothness);
-    // float3 light = LightingPhysicallyBased()
-
-    float4 result = 1.0;
-    pin.normal = normalize(pin.normal);
-    
-    
-    float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
-    normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
-
-    float3 eyeDir = normalize(_EyePosW - pin.posW);
-    
-    float4 diffuse = _DiffuseMapArray[matData.diffuseMapIndex].Sample(_SamplerLinearWrap, pin.uv);
-    diffuse = diffuse *  matData.albedo;
-    
-    float shiniess = (1.0f - matData.roughness) * normalSample.a;
-    Material mat = { diffuse, matData.fresnelR0, shiniess };
+    float metallic = 0.1;
+    BRDFData brdfData = InitializeBRDFData(albedo, metallic, smoothness);
+    Light mainLight = GetMainLight();
     float shadowFactor = CalShadowFactor(pin.shadowPosCS);
-    
-    
-    float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
-    float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
-    
-    float3 directLight = ComputeLighting(lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor) * saturate(ao + 0.2);
-    
-    float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
-    
-    float3 l = directLight + ambient;
-        
-    return float4(l, 1);
+    float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
+    pin.normal = normalize(pin.normal);
+    normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
+    float3 eyeDir = normalize(_EyePosW - pin.posW);
 
-    return result;
+    float3 light = LightingPhysicallyBased(brdfData, mainLight, shadowFactor, normalSample.xyz, eyeDir);
+
+    // todo
+    // diffuse and ao
+
+
+    return float4(light, 1);
 }

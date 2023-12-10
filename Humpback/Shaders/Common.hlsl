@@ -68,7 +68,7 @@ cbuffer cbPass : register(b1)
     float _DeltaTime;
     float4 _AmbientLight;
     
-    Light lights[MaxLights];
+    Light _lights[MaxLights];
 };
 
 TextureCube _SkyCubeMap : register(t0);
@@ -124,4 +124,9 @@ float CalShadowFactor(float4 posH)
     }
 
     return shadowFactor / 9.0f;
+}
+
+Light GetMainLight()
+{
+    return _lights[0];
 }

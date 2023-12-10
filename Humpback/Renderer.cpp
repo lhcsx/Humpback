@@ -1160,9 +1160,9 @@ namespace Humpback
 		_createVertexShader(shaderFullPath, "standardVS");
 		_createPixelShader(shaderFullPath, "opaquePS");
 
-		std::wstring normalOnlyFullPath = GetAssetPath(L"\\shaders\\StandardPBR.hlsl");
-		_createVertexShader(normalOnlyFullPath, "standard_pbr_vs");
-		_createPixelShader(normalOnlyFullPath, "standard_pbr_ps");
+		std::wstring pbrFullPath = GetAssetPath(L"\\shaders\\StandardPBR.hlsl");
+		_createVertexShader(pbrFullPath, "standard_pbr_vs");
+		_createPixelShader(pbrFullPath, "standard_pbr_ps");
 
 		std::wstring skyBoxShaderFullPath = GetAssetPath(L"\\shaders\\Sky.hlsl");
 		_createVertexShader(skyBoxShaderFullPath, "skyBoxVS");
@@ -1202,13 +1202,13 @@ namespace Humpback
 		opaquePsoDesc.pRootSignature = m_rootSignature.Get();
 		opaquePsoDesc.VS =
 		{
-			reinterpret_cast<BYTE*>(m_shaders["standardVS"]->GetBufferPointer()),
-			m_shaders["standardVS"]->GetBufferSize()
+			reinterpret_cast<BYTE*>(m_shaders["standard_pbr_vs"]->GetBufferPointer()),
+			m_shaders["standard_pbr_vs"]->GetBufferSize()
 		};
 		opaquePsoDesc.PS =
 		{
-			reinterpret_cast<BYTE*>(m_shaders["opaquePS"]->GetBufferPointer()),
-			m_shaders["opaquePS"]->GetBufferSize()
+			reinterpret_cast<BYTE*>(m_shaders["standard_pbr_ps"]->GetBufferPointer()),
+			m_shaders["standard_pbr_ps"]->GetBufferSize()
 		};
 		opaquePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		opaquePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;

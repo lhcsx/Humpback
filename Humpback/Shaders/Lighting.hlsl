@@ -63,7 +63,6 @@ float3 ComputeDirectionLight(Light l, Material mat, float3 normal, float3 eyeDir
     return BlinnPhong(lightStrength, lightDir, normal, eyeDir, mat);
 }
 
-
 float3 ComputeLighting(Light _Lights[MaxLights], Material mat,
 	float3 pos, float3 normal, float3 eyeDir, float shadowFactor)
 {
@@ -98,7 +97,7 @@ float DirectBRDFSpecular(BRDFData brdfData, float3 normalWS, float3 lightDirecti
 
 float3 LightingPhysicallyBased(BRDFData brdfData, Light mainLight, float lightAttenuation, float3 normalWS, float3 viewDirectionWS)
 {
-    float3 lightDirectionWS = mainLight.direction;
+    float3 lightDirectionWS = -mainLight.direction;
     float3 lightColor = mainLight.strength;
 
     float NdotL = saturate(dot(normalWS, lightDirectionWS));
@@ -114,20 +113,23 @@ float3 LightingPhysicallyBased(BRDFData brdfData, Light mainLight, float lightAt
 
 float OneMinusReflectivityMetallic(float1 metallic)
 {
-    // TODO : Implementation.
-    return 1.0;
+    // We'll need oneMinusReflectivity, so
+    //   1-reflectivity = 1-lerp(dielectricSpec, 1, metallic) = lerp(1-dielectricSpec, 0, metallic)
+    // store (1-dielectricSpec) in kDielectricSpec.a, then
+    //   1-reflectivity = lerp(alpha, 0, metallic) = alpha + metallic*(0 - alpha) =
+    //                  = alpha - metallic * alpha
+    half oneMinusDielectricSpec = kDielectricSpec.a;
+    return oneMinusDielectricSpec - metallic * oneMinusDielectricSpec;
 }
 
-float PerceptualSmoothnessToPerceptualRoughness(float smoothness)
+float PerceptualSmoothnessToPerceptualRoughness(float perceptualSmoothness)
 {
-    // TODO : Implementation.
-    return 1.0;
+   return (1.0 - perceptualSmoothness);
 }
 
 float PerceptualRoughnessToRoughness(float perceptualRoughness)
 {
-    // TODO : Implementation.
-    return 1.0;
+     return perceptualRoughness * perceptualRoughness;
 }
 
 BRDFData InitializeBRDFData(float3 albedo, float metallic, float smoothness)
