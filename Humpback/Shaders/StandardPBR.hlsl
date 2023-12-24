@@ -63,11 +63,14 @@ float4 PS(VertexOut pin) : SV_Target
     normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
     float3 eyeDir = normalize(_EyePosW - pin.posW);
 
-    float3 light = LightingPhysicallyBased(brdfData, mainLight, shadowFactor, normalSample.xyz, eyeDir);
+    float3 directLight = LightingPhysicallyBased(brdfData, mainLight, shadowFactor, normalSample.xyz, eyeDir);
 
-    // todo
-    // diffuse and ao
+    float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
+    float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
 
+    float3 ambient = _AmbientLight.rgb * albedo.rgb * ao;
 
-    return float4(light, 1);
+    float3 lighting = directLight + ambient;
+
+    return float4(lighting, 1);
 }
