@@ -24,6 +24,8 @@ namespace Humpback
 		~HModelLoader();
 
 		bool Load(std::string fileName);
+		
+		Mesh* GetMesh();
 
 	private:
 

@@ -44,6 +44,11 @@ namespace Humpback
 		return true;
 	}
 
+	Mesh* HModelLoader::GetMesh()
+	{
+		return &m_meshes[0];
+	}
+
 	void HModelLoader::_processNode(aiNode* node, const aiScene* scene)
 	{
 		for (size_t i = 0; i < node->mNumMeshes; i++)

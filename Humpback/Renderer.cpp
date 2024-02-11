@@ -470,8 +470,6 @@ namespace Humpback
 
 			cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
-			//cmdList->DrawIndexedInstanced(obj->indexCount, obj->instanceCount, obj->startIndexLocation, obj->baseVertexLocation, 0);
-			
 			cmdList->DrawIndexedInstanced(obj->indexCount, 1, obj->startIndexLocation, obj->baseVertexLocation, 0);
 		}
 	}
@@ -955,6 +953,8 @@ namespace Humpback
 		{
 			MessageBox(0, L"Assets/PreviewSphere.fbx", 0, 0);
 		}
+
+
 	}
 
 	void Renderer::_createSceneLights()
@@ -1347,59 +1347,62 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
+		int constantBufferIdx = 0;
+
 		auto sky = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&sky->worldM, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
 		sky->texTrans = HMathHelper::Identity4x4();
-		sky->cbIndex = 0;
+		sky->cbIndex = constantBufferIdx;
 		sky->material = m_materials["mat_sky"].get();
 		sky->mesh = m_meshes["shapeGeo"].get();
 		sky->indexCount = sky->mesh->drawArgs["sphere"].indexCount;
 		sky->startIndexLocation = sky->mesh->drawArgs["sphere"].startIndexLocation;
 		sky->baseVertexLocation = sky->mesh->drawArgs["sphere"].baseVertexLocation;
-
 		m_renderLayers[(int)RenderLayer::Sky].push_back(sky.get());
 		m_renderableList.push_back(std::move(sky));
-
-		auto boxGO = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&boxGO->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-		XMStoreFloat4x4(&boxGO->texTrans, XMMatrixScaling(1.0f, 1.0f, 1.0f));
-		boxGO->cbIndex = 1;
-		boxGO->material = m_materials["mat_mirror"].get();
-		boxGO->mesh = m_meshes["shapeGeo"].get();
-		boxGO->indexCount = boxGO->mesh->drawArgs["box"].indexCount;
-		boxGO->startIndexLocation = boxGO->mesh->drawArgs["box"].startIndexLocation;
-		boxGO->baseVertexLocation = boxGO->mesh->drawArgs["box"].baseVertexLocation;
-		
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(boxGO.get());
-		m_renderableList.push_back(std::move(boxGO));
+		++constantBufferIdx;
 
 		auto gridRitem = std::make_unique<RenderableObject>();
 		gridRitem->worldM = HMathHelper::Identity4x4();
 		XMStoreFloat4x4(&gridRitem->texTrans, XMMatrixScaling(8.0f, 8.0f, 1.0f));
-		gridRitem->cbIndex = 2;
+		gridRitem->cbIndex = constantBufferIdx;
 		gridRitem->material = m_materials["mat_bricks"].get();
 		gridRitem->mesh = m_meshes["shapeGeo"].get();
 		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
 		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
 		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		
 		m_renderLayers[(int)RenderLayer::Opaque].push_back(gridRitem.get());
 		m_renderableList.push_back(std::move(gridRitem));
+		++constantBufferIdx;
 
 		auto skullRitem = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(0.0f, 1.0f, 0.0f));
+		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(-2.0f, 1.0f, 0.0f));
 		skullRitem->texTrans = HMathHelper::Identity4x4();
-		skullRitem->cbIndex = 3;
+		skullRitem->cbIndex = constantBufferIdx;
 		skullRitem->material = m_materials["mat_skull"].get();
 		skullRitem->mesh = m_meshes["skullGeo"].get();
 		skullRitem->instanceCount = 0;
 		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
 		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
 		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
-		
 		m_renderLayers[(int)RenderLayer::Opaque].push_back(skullRitem.get());
 		m_renderableList.push_back(std::move(skullRitem));
-	}	
+		++constantBufferIdx;
+
+		auto previewSphereItem = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&previewSphereItem->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
+		previewSphereItem->texTrans = HMathHelper::Identity4x4();
+		previewSphereItem->cbIndex = constantBufferIdx;
+		previewSphereItem->material = m_materials["mat_skull"].get();
+		previewSphereItem->mesh = m_modelLoader->GetMesh();
+		previewSphereItem->instanceCount = 0;
+		previewSphereItem->indexCount = previewSphereItem->mesh->drawArgs["main"].indexCount;
+		previewSphereItem->startIndexLocation = previewSphereItem->mesh->drawArgs["main"].startIndexLocation;
+		previewSphereItem->startIndexLocation = previewSphereItem->mesh->drawArgs["main"].baseVertexLocation;
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(previewSphereItem.get());
+		m_renderableList.push_back(std::move(previewSphereItem));
+		++constantBufferIdx;
+	}
 
 	void Renderer::_createMaterialsData()
 	{
