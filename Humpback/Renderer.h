@@ -17,6 +17,7 @@
 #include "ShadowMap.h"
 #include "Light.h"
 #include "SSAO.h"
+#include "HModelLoader.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -28,6 +29,7 @@ namespace Humpback
 	{
 		Opaque = 0,
 		Sky,
+
 		Count
 	};
 
@@ -73,6 +75,7 @@ namespace Humpback
 		void _createSceneGeometry();
 		void _createSimpleGeometry();
 		void _loadGeometryFromFile();
+		void _loadGeometryFromFileASSIMP();
 		void _createSceneLights();
 
 		void _createRootSignature();
@@ -150,7 +153,8 @@ namespace Humpback
 		DXGI_FORMAT							m_frameBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 		DXGI_FORMAT							m_dsFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-		// Engine config.
+		// TODO
+		// Move to Engine config.
 		unsigned int						m_width;
 		unsigned int						m_height;
 		float								m_aspectRatio;
@@ -174,6 +178,7 @@ namespace Humpback
 
 		std::unique_ptr<Camera>				m_mainCamera = nullptr;
 
+		std::unique_ptr<HModelLoader>		m_modelLoader = nullptr;
 		std::unordered_map<std::string, std::unique_ptr<Mesh>>		m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>>	m_materials;
 		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
@@ -198,7 +203,7 @@ namespace Humpback
 
 		XMFLOAT4X4		m_lightViewMatrix;
 		XMFLOAT4X4		m_lightProjMatrix;
-		XMFLOAT4X4		m_ShadowVPTMatrix;
+		XMFLOAT4X4		m_shadowVPTMatrix;
 
 		std::unique_ptr<ShadowMap>	m_shadowMap = nullptr;
 		DirectX::XMFLOAT3					m_mainLightPos = { 0.0f, 0.0f, 0.0f };

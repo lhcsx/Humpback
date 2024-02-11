@@ -162,5 +162,90 @@ namespace Humpback
 			linearWrap, linearClamp,
 			anisotropicWrap, anisotropicClamp, shadow };
 	}
+
+	HRESULT D3DUtil::CreateD3DResources12(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, uint32_t resDim, size_t width, size_t height, size_t depth, size_t mipCount, size_t arraySize, DXGI_FORMAT format, bool forceSRGB, bool isCubeMap, D3D12_SUBRESOURCE_DATA* initData, ComPtr<ID3D12Resource>& texture, ComPtr<ID3D12Resource>& textureUploadHeap)
+	{
+		{
+			if (device == nullptr)
+				return E_POINTER;
+
+			// TODO
+			// Uncomment and define MakeSRGB.
+			//if (forceSRGB)
+			//	format = MakeSRGB(format);
+
+			HRESULT hr = E_FAIL;
+			switch (resDim)
+			{
+			case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			{
+				D3D12_RESOURCE_DESC texDesc;
+				ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
+				texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+				texDesc.Alignment = 0;
+				texDesc.Width = width;
+				texDesc.Height = (uint32_t)height;
+				texDesc.DepthOrArraySize = (depth > 1) ? (uint16_t)depth : (uint16_t)arraySize;
+				texDesc.MipLevels = (uint16_t)mipCount;
+				texDesc.Format = format;
+				texDesc.SampleDesc.Count = 1;
+				texDesc.SampleDesc.Quality = 0;
+				texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+				texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+				auto heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+				hr = device->CreateCommittedResource(
+					&heapProperties,
+					D3D12_HEAP_FLAG_NONE,
+					&texDesc,
+					D3D12_RESOURCE_STATE_COMMON,
+					nullptr,
+					IID_PPV_ARGS(&texture)
+				);
+
+				if (FAILED(hr))
+				{
+					texture = nullptr;
+					return hr;
+				}
+				else
+				{
+					const UINT num2DSubresources = texDesc.DepthOrArraySize * texDesc.MipLevels;
+					const UINT64 uploadBufferSize = GetRequiredIntermediateSize(texture.Get(), 0, num2DSubresources);
+
+					auto heapProperties1 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+					auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+					hr = device->CreateCommittedResource(
+						&heapProperties1,
+						D3D12_HEAP_FLAG_NONE,
+						&resDesc,
+						D3D12_RESOURCE_STATE_GENERIC_READ,
+						nullptr,
+						IID_PPV_ARGS(&textureUploadHeap));
+					if (FAILED(hr))
+					{
+						texture = nullptr;
+						return hr;
+					}
+					else
+					{
+						auto resBarrier = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+							D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+						cmdList->ResourceBarrier(1, &resBarrier);
+
+						// Use Heap-allocating UpdateSubresources implementation for variable number of subresources (which is the case for textures).
+						UpdateSubresources(cmdList, texture.Get(), textureUploadHeap.Get(), 0, 0, num2DSubresources, initData);
+
+						auto resBarrier1 = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+							D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+						cmdList->ResourceBarrier(1, &resBarrier1);
+					}
+				}
+			} break;
+			}
+
+			return hr;
+		}
+	}
 }
 

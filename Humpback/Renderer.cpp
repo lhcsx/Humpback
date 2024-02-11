@@ -64,6 +64,7 @@ namespace Humpback
 
 		_createSceneLights();
 		_createSceneGeometry();
+		_loadGeometryFromFileASSIMP();
 		_createMaterialsData();
 		_createRenderableObjects();
 
@@ -215,7 +216,7 @@ namespace Humpback
 		XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
 		XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 		XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_ShadowVPTMatrix);
+		XMMATRIX shadowVPT = XMLoadFloat4x4(&m_shadowVPTMatrix);
 		
 		XMMATRIX viewProjTex = viewProj * DirectX::XMLoadFloat4x4(&HMathHelper::NDCToTexCoord());
 
@@ -341,7 +342,7 @@ namespace Humpback
 		XMMATRIX VPT = lightView * lightProj * XMLoadFloat4x4(&HMathHelper::NDCToTexCoord());
 		XMStoreFloat4x4(&m_lightViewMatrix, lightView);
 		XMStoreFloat4x4(&m_lightProjMatrix, lightProj);
-		XMStoreFloat4x4(&m_ShadowVPTMatrix,  VPT);
+		XMStoreFloat4x4(&m_shadowVPTMatrix,  VPT);
 	}
 
 	void Renderer::_render()
@@ -668,6 +669,10 @@ namespace Humpback
 	{
 		m_timer.reset();
 		m_timer.release();
+		if (m_modelLoader)
+		{
+			m_modelLoader.reset();
+		}
 	}
 
 	void Renderer::_waitForPreviousFrame()
@@ -839,6 +844,8 @@ namespace Humpback
 		m_meshes[geo->Name] = std::move(geo);
 	}
 
+	
+
 	void Renderer::_loadGeometryFromFile()
 	{
 		std::ifstream fin("Models/skull.txt");
@@ -938,6 +945,16 @@ namespace Humpback
 		skullMesh->drawArgs["skull"] = skullSM;
 
 		m_meshes[skullMesh->Name] = std::move(skullMesh);
+	}
+
+	void Renderer::_loadGeometryFromFileASSIMP()
+	{
+		m_modelLoader = std::make_unique<HModelLoader>(m_device.Get(), m_commandList.Get());
+
+		if (m_modelLoader->Load("Assets/PreviewSphere.fbx") == false)
+		{
+			MessageBox(0, L"Assets/PreviewSphere.fbx", 0, 0);
+		}
 	}
 
 	void Renderer::_createSceneLights()

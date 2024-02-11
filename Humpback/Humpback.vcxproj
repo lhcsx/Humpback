@@ -78,6 +78,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <ExternalIncludePath>$(ExternalIncludePath)</ExternalIncludePath>
+    <LibraryPath>C:\Project\DX12Proj\Humpback\Humpback\Assimp\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -119,11 +122,13 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AdditionalOptions>/wd4430 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>Assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>dxgi.lib;dxguid.lib;D3DCompiler.lib;D3D12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>Assimp/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <EntryPointName>
@@ -163,6 +168,7 @@
     <ClInclude Include="GeometryGenetator.h" />
     <ClInclude Include="HEngineConfig.h" />
     <ClInclude Include="HMathHelper.h" />
+    <ClInclude Include="HModelLoader.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
@@ -187,6 +193,7 @@
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="GeometryGenetator.cpp" />
     <ClCompile Include="HMathHelper.cpp" />
+    <ClCompile Include="HModelLoader.cpp" />
     <ClCompile Include="Humpback.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="ShadowMap.cpp" />

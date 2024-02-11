@@ -16,6 +16,7 @@ namespace Humpback
 	public:
 
 		std::string name;
+		std::string type;
 
 		std::wstring filePath;
 
