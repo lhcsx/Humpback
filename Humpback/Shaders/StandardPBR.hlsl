@@ -58,9 +58,7 @@ float4 PS(VertexOut pin) : SV_Target
     float metallic = metallicSmothness.r;
     BRDFData brdfData = InitializeBRDFData(albedo, metallic, smoothness);
     Light mainLight = GetMainLight();
-    // float shadowFactor = CalShadowFactor(pin.shadowPosCS);
-    float shadowFactor = 1;
-    // float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
+    float shadowFactor = CalShadowFactor(pin.shadowPosCS);
     float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
     pin.normal = normalize(pin.normal);
     normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
@@ -72,7 +70,7 @@ float4 PS(VertexOut pin) : SV_Target
     // float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
     float ao = 1;
 
-    float3 ambient = _AmbientLight.rgb * albedo.rgb * ao * 2;
+    float3 ambient = _AmbientLight.rgb * albedo.rgb * ao;
 
     float3 lighting = directLight + ambient;
 

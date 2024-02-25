@@ -372,7 +372,7 @@ namespace Humpback
 
 
 		// Shadow map pass.
-		//_renderShadowMap();
+		_renderShadowMap();
 
 		// Normal depth pass.
 		//_renderNormalDepth();
@@ -1440,8 +1440,6 @@ namespace Humpback
 
 		m_defaultNormalMapIndex = 4;
 
-
-
 		// Create the skybox cubemap from the dds texture file.
 		{
 			auto tex = std::make_unique<Texture>();
@@ -1533,7 +1531,7 @@ namespace Humpback
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
 
 		m_skyTexHeapIndex = tex2DList.size();
-		//m_shadowMapHeapIndex = tex2DList.size() + 1;
+		m_shadowMapHeapIndex = m_skyTexHeapIndex + 1;
 		//m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
 		//m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
 		//int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
@@ -1558,8 +1556,8 @@ namespace Humpback
 		//nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
 		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
-		//m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
-		//	_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
+		m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
+			_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
 
 		//m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
 		//	_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),

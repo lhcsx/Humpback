@@ -25,8 +25,8 @@ void ShutDownEngine();
 namespace 
 {
     Humpback::Renderer* gRenderer = nullptr;
-    UINT gWndWidth = 800;
-    UINT gWndHeight = 600;
+    UINT gWndWidth = 1920;
+    UINT gWndHeight = 1080;
     HWND gHwnd;
 }
 
