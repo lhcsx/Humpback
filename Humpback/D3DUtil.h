@@ -7,7 +7,9 @@
 #include <xstring>
 #include <wrl.h>
 #include <d3d12.h>
-#include "d3dx12.h"
+
+#include "../DirectXTK12-main/Src/d3dx12.h"
+
 
 namespace Humpback 
 {
@@ -44,23 +46,5 @@ namespace Humpback
             const std::string_view target);
 
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetCommonStaticSamplers();
-
-        static HRESULT CreateD3DResources12(
-            ID3D12Device* device,
-            ID3D12GraphicsCommandList* cmdList,
-            _In_ uint32_t resDim,
-            _In_ size_t width,
-            _In_ size_t height,
-            _In_ size_t depth,
-            _In_ size_t mipCount,
-            _In_ size_t arraySize,
-            _In_ DXGI_FORMAT format,
-            _In_ bool forceSRGB,
-            _In_ bool isCubeMap,
-            _In_reads_opt_(mipCount* arraySize) D3D12_SUBRESOURCE_DATA* initData,
-            Microsoft::WRL::ComPtr<ID3D12Resource>& texture,
-            Microsoft::WRL::ComPtr<ID3D12Resource>& textureUploadHeap
-        );
-		
     };
 }

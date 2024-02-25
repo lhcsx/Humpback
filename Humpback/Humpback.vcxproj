@@ -91,6 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\DirectXTK12\Inc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -105,6 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\DirectXTK12\Inc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -122,7 +124,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AdditionalOptions>/wd4430 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>Assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\DirectXTK12-main\Inc;$(SolutionDir)\Humpback\Assimp\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -146,6 +148,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)\DirectXTK12\Inc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -161,14 +164,12 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="d3d12.h" />
     <ClInclude Include="D3DUtil.h" />
-    <ClInclude Include="d3dx12.h" />
-    <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="FrameResource.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GeometryGenetator.h" />
     <ClInclude Include="HEngineConfig.h" />
     <ClInclude Include="HMathHelper.h" />
-    <ClInclude Include="HModelLoader.h" />
+    <ClInclude Include="HMeshImporter.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Mesh.h" />
@@ -189,11 +190,10 @@
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D3DUtil.cpp" />
-    <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="FrameResource.cpp" />
     <ClCompile Include="GeometryGenetator.cpp" />
     <ClCompile Include="HMathHelper.cpp" />
-    <ClCompile Include="HModelLoader.cpp" />
+    <ClCompile Include="HMeshImporter.cpp" />
     <ClCompile Include="Humpback.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
@@ -240,6 +240,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DirectXTK12-main\DirectXTK_Desktop_2022_Win10.vcxproj">
+      <Project>{3e0e8608-cd9b-4c76-af33-29ca38f2c9f0}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

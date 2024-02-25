@@ -49,34 +49,5 @@ VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
 
 float4 PS(VertexOut pin) : SV_Target
 {
-    float4 result = 1.0;
-    pin.normal = normalize(pin.normal);
-    
-    MaterialData matData = _MaterialDataBuffer[pin.matIdx];
-    
-    float4 normalSample = _DiffuseMapArray[matData.normalMapIndex].Sample(_SamplerLinearWrap, pin.uv);
-    normalSample.xyz = UnpackNormal(normalSample.xyz, pin.normal, pin.tangent);
-
-    float3 eyeDir = normalize(_EyePosW - pin.posW);
-    
-    float4 diffuse = _DiffuseMapArray[matData.diffuseMapIndex].Sample(_SamplerLinearWrap, pin.uv) * matData.albedo;
-    
-    
-    float shiniess = (1.0f - matData.roughness) * normalSample.a;
-    Material mat = { diffuse, matData.fresnelR0, shiniess };
-    float shadowFactor = CalShadowFactor(pin.shadowPosCS);
-    
-    
-    float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
-    float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
-    
-    float3 directLight = ComputeLighting(_lights, mat, pin.posW, normalSample.xyz, eyeDir, shadowFactor) * saturate(ao + 0.2);
-    
-    float3 ambient = _AmbientLight.rgb * diffuse.rgb * ao;
-    
-    float3 l = directLight + ambient;
-        
-    return float4(l, 1);
-
-    return result;
+    return float4(1, 0, 0, 1);
 }

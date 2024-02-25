@@ -16,13 +16,11 @@ SamplerComparisonState _SamplerShadow : register(s6);
 struct MaterialData
 {
     float4 albedo;
-    float3 fresnelR0;
-    float roughness;
     float4x4 matTransform;
     uint diffuseMapIndex;
     uint normalMapIndex;
+    uint metallicSmothnessMapIndex;
     uint pad1;
-    uint pad2;
 };
 
 

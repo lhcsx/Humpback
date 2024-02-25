@@ -2,7 +2,8 @@
 Real-time Rendering Engine.
 
 Key Features:
-* Directional Lighting;
+* Import Model with ASSIMP;
+* Physically Based Shading;
 * Shadow Mapping;
 * Screen Space Ambient Occlusion.
 

@@ -36,9 +36,6 @@
     <ClInclude Include="HumpbackHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="d3dx12.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="d3d12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -84,9 +81,6 @@
     <ClInclude Include="Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DDSTextureLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -96,7 +90,7 @@
     <ClInclude Include="SSAO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HModelLoader.h">
+    <ClInclude Include="HMeshImporter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -128,16 +122,13 @@
     <ClCompile Include="Waves.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DDSTextureLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ShadowMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SSAO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HModelLoader.cpp">
+    <ClCompile Include="HMeshImporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

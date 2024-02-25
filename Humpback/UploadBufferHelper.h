@@ -4,7 +4,7 @@
 #pragma once
 
 #include "D3DUtil.h"
-#include "d3dx12.h"
+#include "../DirectXTK12-main/Src/d3dx12.h"
 
 namespace Humpback 
 {

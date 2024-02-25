@@ -10,12 +10,15 @@
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 
+#include "../DirectXTK12-main/Src/d3dx12.h"
 #include "HumpbackHelper.h"
 #include "Renderer.h"
 #include "D3DUtil.h"
 #include "Vertex.h"
 #include "GeometryGenetator.h"
+
 #include "DDSTextureLoader.h"
+#include "WICTextureLoader.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -231,7 +234,7 @@ namespace Humpback
 		m_mainPassCB.nearZ = m_mainCamera->GetNearZ();
 		m_mainPassCB.farZ = m_mainCamera->GetFarZ();
 		m_mainPassCB.cameraPosW = m_mainCamera->GetPosition();
-		m_mainPassCB.ambient = XMFLOAT4(0.2f, 0.2f, 0.3f, 1.0f);
+		m_mainPassCB.ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 
 		for (size_t i = 0; i < 3; i++)
 		{
@@ -254,10 +257,10 @@ namespace Humpback
 				
 				MaterialConstants matConstants;
 				matConstants.diffuseAlbedo = pMat->diffuseAlbedo;
-				matConstants.fresnelR0 = pMat->fresnelR0;
-				matConstants.roughness = pMat->roughness;
+
 				matConstants.diffuseMapIndex = pMat->diffuseSrvHeapIndex;
 				matConstants.normalMapIndex = pMat->normalSrvHeapIndex;
+				matConstants.metallicSmothnessMapIndex = pMat->metallicSmothnessSrvHeapIndex;
 				
 				XMMATRIX matrixMatTrans = XMLoadFloat4x4(&pMat->matTransform);
 				XMStoreFloat4x4(&matConstants.matTransform, XMMatrixTranspose(matrixMatTrans));
@@ -363,19 +366,19 @@ namespace Humpback
 		
 		_bindMaterialBuffer();
 
-		m_commandList->SetGraphicsRootDescriptorTable(3, m_nullSrv);
+		//m_commandList->SetGraphicsRootDescriptorTable(3, m_nullSrv);
 
-		m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
+		//m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
 
 
 		// Shadow map pass.
-		_renderShadowMap();
+		//_renderShadowMap();
 
 		// Normal depth pass.
-		_renderNormalDepth();
+		//_renderNormalDepth();
 
 		// Generate AO.
-		_renderAO();
+		//_renderAO();
 
 
 		// Main pass.
@@ -711,7 +714,6 @@ namespace Humpback
 		m_sceneBoundingSphere.Radius = sqrtf(10.0f * 10.0f + 15.0f * 15.0f);
 
 		_createSimpleGeometry();
-		_loadGeometryFromFile();
 	}
 
 	void Renderer::_createSimpleGeometry()
@@ -947,7 +949,7 @@ namespace Humpback
 
 	void Renderer::_loadGeometryFromFileASSIMP()
 	{
-		m_modelLoader = std::make_unique<HModelLoader>(m_device.Get(), m_commandList.Get());
+		m_modelLoader = std::make_unique<HMeshImporter>(m_device.Get(), m_commandList.Get());
 
 		if (m_modelLoader->Load("Assets/PreviewSphere.fbx") == false)
 		{
@@ -1173,10 +1175,6 @@ namespace Humpback
 
 	void Renderer::_createShadersAndInputLayout()
 	{
-		std::wstring shaderFullPath = GetAssetPath(L"\\shaders\\SimpleShader.hlsl");
-		_createVertexShader(shaderFullPath, "standardVS");
-		_createPixelShader(shaderFullPath, "opaquePS");
-
 		std::wstring pbrFullPath = GetAssetPath(L"\\shaders\\StandardPBR.hlsl");
 		_createVertexShader(pbrFullPath, "standard_pbr_vs");
 		_createPixelShader(pbrFullPath, "standard_pbr_ps");
@@ -1375,25 +1373,11 @@ namespace Humpback
 		m_renderableList.push_back(std::move(gridRitem));
 		++constantBufferIdx;
 
-		auto skullRitem = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&skullRitem->worldM, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixTranslation(-2.0f, 1.0f, 0.0f));
-		skullRitem->texTrans = HMathHelper::Identity4x4();
-		skullRitem->cbIndex = constantBufferIdx;
-		skullRitem->material = m_materials["mat_skull"].get();
-		skullRitem->mesh = m_meshes["skullGeo"].get();
-		skullRitem->instanceCount = 0;
-		skullRitem->indexCount = skullRitem->mesh->drawArgs["skull"].indexCount;
-		skullRitem->startIndexLocation = skullRitem->mesh->drawArgs["skull"].startIndexLocation;
-		skullRitem->baseVertexLocation = skullRitem->mesh->drawArgs["skull"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(skullRitem.get());
-		m_renderableList.push_back(std::move(skullRitem));
-		++constantBufferIdx;
-
 		auto previewSphereItem = std::make_unique<RenderableObject>();
 		XMStoreFloat4x4(&previewSphereItem->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
 		previewSphereItem->texTrans = HMathHelper::Identity4x4();
 		previewSphereItem->cbIndex = constantBufferIdx;
-		previewSphereItem->material = m_materials["mat_skull"].get();
+		previewSphereItem->material = m_materials["mat_sphere"].get();
 		previewSphereItem->mesh = m_modelLoader->GetMesh();
 		previewSphereItem->instanceCount = 0;
 		previewSphereItem->indexCount = previewSphereItem->mesh->drawArgs["main"].indexCount;
@@ -1406,90 +1390,101 @@ namespace Humpback
 
 	void Renderer::_createMaterialsData()
 	{
+		int matCbIdx = 0;
+
 		auto bricksMat = std::make_unique<Material>();
 		bricksMat->name = "mat_bricks";
-		bricksMat->matCBIdx = 0;
+		bricksMat->matCBIdx = matCbIdx;
 		bricksMat->diffuseSrvHeapIndex = 0;
 		bricksMat->normalSrvHeapIndex = 1;
+		bricksMat->metallicSmothnessSrvHeapIndex = 2;
 		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
-		bricksMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		bricksMat->roughness = 0.1f;
-
-		auto tileMat = std::make_unique<Material>();
-		tileMat->name = "mat_tile";
-		tileMat->matCBIdx = 1;
-		tileMat->diffuseSrvHeapIndex = 2;
-		tileMat->normalSrvHeapIndex = 1;
-		tileMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
-		tileMat->fresnelR0 = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		tileMat->roughness = 0.9f;
-
-		auto mirrorMat = std::make_unique<Material>();
-		mirrorMat->name = "mat_mirror";
-		mirrorMat->matCBIdx = 2;
-		mirrorMat->diffuseSrvHeapIndex = 2;
-		mirrorMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
-		mirrorMat->diffuseAlbedo = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-		mirrorMat->fresnelR0 = XMFLOAT3(0.98f, 0.97f, 0.95f);
-		mirrorMat->roughness = 0.1f;
-
-		auto skullMat = std::make_unique<Material>();
-		skullMat->name = "mat_skull";
-		skullMat->matCBIdx = 3;
-		skullMat->diffuseSrvHeapIndex = 3;
-		skullMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
-		skullMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.7f, 0.8f, 1.0f);
-		skullMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		skullMat->roughness = 0.8f;
-
+		++matCbIdx;
 
 		auto skyMat = std::make_unique<Material>();
 		skyMat->name = "mat_sky";
-		skyMat->matCBIdx = 4;
+		skyMat->matCBIdx = matCbIdx;
 		skyMat->diffuseSrvHeapIndex = 3;
 		skyMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		skyMat->fresnelR0 = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		skyMat->roughness = 1.0f;
+		++matCbIdx;
 
+		auto previewSphereMat = std::make_unique<Material>();
+		previewSphereMat->name = "mat_preview_sphere";
+		previewSphereMat->matCBIdx = matCbIdx;
+		previewSphereMat->diffuseSrvHeapIndex = 0;
+		previewSphereMat->normalSrvHeapIndex = 1;
+		previewSphereMat->metallicSmothnessSrvHeapIndex = 2;
+		previewSphereMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.f, 0.f, 1.0f);
+		++matCbIdx;
 
 		m_materials["mat_bricks"] = std::move(bricksMat);
-		m_materials["mat_tile"] = std::move(tileMat);
-		m_materials["mat_mirror"] = std::move(mirrorMat);
-		m_materials["mat_skull"] = std::move(skullMat);
 		m_materials["mat_sky"] = std::move(skyMat);
+		m_materials["mat_sphere"] = std::move(previewSphereMat);
 	}
 
 	void Renderer::_loadTextures()
 	{
 		std::vector<std::string> texNames =
 		{
-			"tex_bricks",
-			"tex_bricks_normal",
-			"tex_tile",
-			"tex_default",
-			"tex_default_normal",
-			"cube_map_sky",
+			"tex_sphere_albedo",
+			"tex_sphere_normal",
+			"tex_sphere_metallic",
 		};
 
 		std::vector<std::wstring> texPaths =
 		{
-			L"Textures/bricks2.dds",
-			L"Textures/bricks2_nmap.dds",
-			L"Textures/tile.dds",
-			L"Textures/white1x1.dds",
-			L"Textures/default_nmap.dds",
-			L"Textures/grasscube1024.dds",
+			L"Assets/PreviewSphere_Sphere_AlbedoTransparency.png",
+			L"Assets/PreviewSphere_Sphere_Normal.png",
+			L"Assets/PreviewSphere_Sphere_MetallicSmoothness.png",
 		};
 
 		m_defaultNormalMapIndex = 4;
 
+
+
+		// Create the skybox cubemap from the dds texture file.
+		{
+			auto tex = std::make_unique<Texture>();
+			tex->name = "sky_box";
+			ThrowIfFailed(CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(), L"Assets/grasscube1024.dds",
+				tex->resource, tex->uploadHeap));
+
+			m_textures[tex->name] = std::move(tex);
+		}
+
 		for (size_t i = 0; i < texPaths.size(); i++)
 		{
+			std::wstring path = texPaths[i];
 			auto tex = std::make_unique<Texture>();
 			tex->name = texNames[i];
 			tex->filePath = texPaths[i];
-			ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(),
-				tex->filePath.c_str(), tex->resource, tex->uploadHeap));
+			D3D12_SUBRESOURCE_DATA subresource;
+			std::unique_ptr<uint8_t[]> decodedData;
+			ThrowIfFailed(LoadWICTextureFromFile(m_device.Get(), path.c_str(), 
+				tex->resource.GetAddressOf(), decodedData, subresource, 2048));
+
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(tex->resource.Get(), 0, 1);
+
+			CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+
+			auto desc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+
+			// Create the GPU upload buffer.
+			ThrowIfFailed(
+				m_device->CreateCommittedResource(
+					&heapProps,
+					D3D12_HEAP_FLAG_NONE,
+					&desc,
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(tex->uploadHeap.GetAddressOf())));
+		
+			UpdateSubresources<1>(m_commandList.Get(), tex->resource.Get(), tex->uploadHeap.Get(),
+				0, 0, 1, &subresource);
+
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(tex->resource.Get(),
+				D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			m_commandList->ResourceBarrier(1, &barrier);
 
 			m_textures[tex->name] = std::move(tex);
 		}
@@ -1506,14 +1501,11 @@ namespace Humpback
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
 		std::vector<ComPtr<ID3D12Resource>> tex2DList = {
-			m_textures["tex_bricks"]->resource,
-			m_textures["tex_bricks_normal"]->resource,
-			m_textures["tex_tile"]->resource,
-			m_textures["tex_default"]->resource,
-			m_textures["tex_default_normal"]->resource
+			m_textures["tex_sphere_albedo"]->resource,
+			m_textures["tex_sphere_normal"]->resource,
+			m_textures["tex_sphere_metallic"]->resource,
 		};
 
-		auto skyCubeMap = m_textures["cube_map_sky"]->resource;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1532,6 +1524,7 @@ namespace Humpback
 		}
 
 		// Create srv for sky box.
+		auto skyCubeMap = m_textures["sky_box"]->resource;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
 		srvDesc.Format = skyCubeMap->GetDesc().Format;
@@ -1540,36 +1533,37 @@ namespace Humpback
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
 
 		m_skyTexHeapIndex = tex2DList.size();
-		m_shadowMapHeapIndex = tex2DList.size() + 1;
-		m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
-		m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
-		int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
-		int nullTexSrvIndex1 = nullCubeSrvIndex + 1;
-		int nullTexSrvIndex2 = nullTexSrvIndex1 + 1;
+		//m_shadowMapHeapIndex = tex2DList.size() + 1;
+		//m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
+		//m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
+		//int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
+		//int nullTexSrvIndex1 = nullCubeSrvIndex + 1;
+		//int nullTexSrvIndex2 = nullTexSrvIndex1 + 1;
 
-		auto nullSrv = _getCpuSrv(nullCubeSrvIndex);
-		m_nullSrv = _getGpuSrv(nullCubeSrvIndex);
+		//auto nullSrv = _getCpuSrv(nullCubeSrvIndex);
+		//m_nullSrv = _getGpuSrv(nullCubeSrvIndex);
 
-		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		//nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
 
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture1D.ResourceMinLODClamp = 0.0f;
-		// Create srv for null shadow map.
-		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		//srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		//srvDesc.Texture2D.MostDetailedMip = 0;
+		//srvDesc.Texture2D.MipLevels = 1;
+		//srvDesc.Texture1D.ResourceMinLODClamp = 0.0f;
 
-		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
-		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		//// Create srv for null shadow map.
+		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
-		m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
-			_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
+		//nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
-		m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
-			_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),
-			_getRtv(Renderer::FrameBufferCount), m_cbvSrvUavDescriptorSize, m_rtvDescriptorSize);
+		//m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
+		//	_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
+
+		//m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
+		//	_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),
+		//	_getRtv(Renderer::FrameBufferCount), m_cbvSrvUavDescriptorSize, m_rtvDescriptorSize);
 	}
 
 	void Renderer::_createFrameResources()

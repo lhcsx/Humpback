@@ -17,7 +17,7 @@
 #include "ShadowMap.h"
 #include "Light.h"
 #include "SSAO.h"
-#include "HModelLoader.h"
+#include "HMeshImporter.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -178,7 +178,7 @@ namespace Humpback
 
 		std::unique_ptr<Camera>				m_mainCamera = nullptr;
 
-		std::unique_ptr<HModelLoader>		m_modelLoader = nullptr;
+		std::unique_ptr<HMeshImporter>		m_modelLoader = nullptr;
 		std::unordered_map<std::string, std::unique_ptr<Mesh>>		m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>>	m_materials;
 		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
