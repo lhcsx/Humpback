@@ -185,7 +185,6 @@
     <ClInclude Include="Timer.h" />
     <ClInclude Include="UploadBufferHelper.h" />
     <ClInclude Include="Vertex.h" />
-    <ClInclude Include="Waves.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
@@ -199,7 +198,6 @@
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SSAO.cpp" />
     <ClCompile Include="Timer.cpp" />
-    <ClCompile Include="Waves.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Humpback.rc" />
