@@ -196,6 +196,8 @@ namespace Humpback
 
 		int				m_skyTexHeapIndex = 0;
 		int				m_defaultNormalMapIndex = 0;
+		int				m_defaultBlackIndex = 0;
+		int				m_defaultWhiteIndex = 0;
 		int				m_shadowMapHeapIndex = 0;
 		int				m_ssaoHeapIndexStart = 0;
 		int				m_ssaoAmbientMapIndex = 0;

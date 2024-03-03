@@ -51,8 +51,8 @@ float4 PS(VertexOut pin) : SV_Target
 {
     MaterialData matData = _MaterialDataBuffer[pin.matIdx];
 
-
     float3 albedo = _DiffuseMapArray[matData.diffuseMapIndex].Sample(_SamplerLinearWrap, pin.uv);
+    albedo *= matData.albedo;
     float4 metallicSmothness = _DiffuseMapArray[matData.metallicSmothnessMapIndex].Sample(_SamplerLinearWrap, pin.uv);
     float smoothness = metallicSmothness.a;
     float metallic = metallicSmothness.r;
@@ -67,12 +67,13 @@ float4 PS(VertexOut pin) : SV_Target
     float3 directLight = LightingPhysicallyBased(brdfData, mainLight, shadowFactor, normalSample.xyz, eyeDir);
 
     float2 uvAO = pin.ssaoPosCS / pin.ssaoPosCS.w;
-    // float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
-    float ao = 1;
+    float ao = _SsaoMap.Sample(_SamplerLinearWrap, uvAO).r;
 
     float3 ambient = _AmbientLight.rgb * albedo.rgb * ao;
 
     float3 lighting = directLight + ambient;
+
+    // return float4(metallic, 0, 0, 1);
 
     return float4(lighting, 1);
 }

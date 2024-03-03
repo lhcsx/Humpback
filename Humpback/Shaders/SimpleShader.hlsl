@@ -49,5 +49,6 @@ VertexOut VS(VertexIn vin, uint instanceID : SV_InstanceID)
 
 float4 PS(VertexOut pin) : SV_Target
 {
-    return float4(1, 0, 0, 1);
+    MaterialData matData = _MaterialDataBuffer[pin.matIdx];
+    return float4(matData.albedo.rgb, 1);
 }

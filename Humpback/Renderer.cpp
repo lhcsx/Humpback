@@ -366,19 +366,14 @@ namespace Humpback
 		
 		_bindMaterialBuffer();
 
-		//m_commandList->SetGraphicsRootDescriptorTable(3, m_nullSrv);
-
-		//m_commandList->SetGraphicsRootDescriptorTable(4, m_srvHeap->GetGPUDescriptorHandleForHeapStart());
-
-
 		// Shadow map pass.
 		_renderShadowMap();
 
 		// Normal depth pass.
-		//_renderNormalDepth();
+		_renderNormalDepth();
 
 		// Generate AO.
-		//_renderAO();
+		_renderAO();
 
 
 		// Main pass.
@@ -1395,10 +1390,10 @@ namespace Humpback
 		auto bricksMat = std::make_unique<Material>();
 		bricksMat->name = "mat_bricks";
 		bricksMat->matCBIdx = matCbIdx;
-		bricksMat->diffuseSrvHeapIndex = 0;
-		bricksMat->normalSrvHeapIndex = 1;
-		bricksMat->metallicSmothnessSrvHeapIndex = 2;
-		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::LightGray);
+		bricksMat->diffuseSrvHeapIndex = m_defaultWhiteIndex;
+		bricksMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
+		bricksMat->metallicSmothnessSrvHeapIndex = m_defaultBlackIndex;
+		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::DarkGray);
 		++matCbIdx;
 
 		auto skyMat = std::make_unique<Material>();
@@ -1414,7 +1409,7 @@ namespace Humpback
 		previewSphereMat->diffuseSrvHeapIndex = 0;
 		previewSphereMat->normalSrvHeapIndex = 1;
 		previewSphereMat->metallicSmothnessSrvHeapIndex = 2;
-		previewSphereMat->diffuseAlbedo = XMFLOAT4(0.5f, 0.f, 0.f, 1.0f);
+		previewSphereMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		++matCbIdx;
 
 		m_materials["mat_bricks"] = std::move(bricksMat);
@@ -1429,6 +1424,9 @@ namespace Humpback
 			"tex_sphere_albedo",
 			"tex_sphere_normal",
 			"tex_sphere_metallic",
+			"tex_default_white",
+			"tex_default_black",
+			"tex_default_normal",
 		};
 
 		std::vector<std::wstring> texPaths =
@@ -1436,9 +1434,14 @@ namespace Humpback
 			L"Assets/PreviewSphere_Sphere_AlbedoTransparency.png",
 			L"Assets/PreviewSphere_Sphere_Normal.png",
 			L"Assets/PreviewSphere_Sphere_MetallicSmoothness.png",
+			L"Assets/white.png",
+			L"Assets/black.png",
+			L"Assets/default_normal_map.png",
 		};
 
-		m_defaultNormalMapIndex = 4;
+		m_defaultNormalMapIndex = texPaths.size() - 1;
+		m_defaultBlackIndex = texPaths.size() - 2;
+		m_defaultWhiteIndex = texPaths.size() - 3;
 
 		// Create the skybox cubemap from the dds texture file.
 		{
@@ -1502,6 +1505,9 @@ namespace Humpback
 			m_textures["tex_sphere_albedo"]->resource,
 			m_textures["tex_sphere_normal"]->resource,
 			m_textures["tex_sphere_metallic"]->resource,
+			m_textures["tex_default_white"]->resource,
+			m_textures["tex_default_black"]->resource,
+			m_textures["tex_default_normal"]->resource,
 		};
 
 
@@ -1532,36 +1538,36 @@ namespace Humpback
 
 		m_skyTexHeapIndex = tex2DList.size();
 		m_shadowMapHeapIndex = m_skyTexHeapIndex + 1;
-		//m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
-		//m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
-		//int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
-		//int nullTexSrvIndex1 = nullCubeSrvIndex + 1;
-		//int nullTexSrvIndex2 = nullTexSrvIndex1 + 1;
+		m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
+		m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;
+		int nullCubeSrvIndex = m_ssaoHeapIndexStart + 5;
+		int nullTexSrvIndex1 = nullCubeSrvIndex + 1;
+		int nullTexSrvIndex2 = nullTexSrvIndex1 + 1;
 
-		//auto nullSrv = _getCpuSrv(nullCubeSrvIndex);
-		//m_nullSrv = _getGpuSrv(nullCubeSrvIndex);
+		auto nullSrv = _getCpuSrv(nullCubeSrvIndex);
+		m_nullSrv = _getGpuSrv(nullCubeSrvIndex);
 
-		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-		//nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
 
-		//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		//srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//srvDesc.Texture2D.MostDetailedMip = 0;
-		//srvDesc.Texture2D.MipLevels = 1;
-		//srvDesc.Texture1D.ResourceMinLODClamp = 0.0f;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture1D.ResourceMinLODClamp = 0.0f;
 
-		//// Create srv for null shadow map.
-		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		// Create null srv for shadow map.
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
-		//nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
-		//m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+		nullSrv.Offset(1, m_cbvSrvUavDescriptorSize);
+		m_device->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
 
 		m_shadowMap->BuildDescriptors(_getCpuSrv(m_shadowMapHeapIndex),
 			_getGpuSrv(m_shadowMapHeapIndex), _getDsv(1));
 
-		//m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
-		//	_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),
-		//	_getRtv(Renderer::FrameBufferCount), m_cbvSrvUavDescriptorSize, m_rtvDescriptorSize);
+		m_featureSSAO->BuildDescriptors(m_depthStencilBuffer.Get(),
+			_getCpuSrv(m_ssaoHeapIndexStart), _getGpuSrv(m_ssaoHeapIndexStart),
+			_getRtv(Renderer::FrameBufferCount), m_cbvSrvUavDescriptorSize, m_rtvDescriptorSize);
 	}
 
 	void Renderer::_createFrameResources()
