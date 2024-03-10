@@ -68,7 +68,7 @@ namespace Humpback
 		_createSceneLights();
 		_createSceneGeometry();
 		_loadGeometryFromFileASSIMP();
-		_createMaterialsData();
+		_createAllMaterials();
 		_createRenderableObjects();
 
 		_createFrameResources();
@@ -665,10 +665,6 @@ namespace Humpback
 	{
 		m_timer.reset();
 		m_timer.release();
-		if (m_modelLoader)
-		{
-			m_modelLoader.reset();
-		}
 	}
 
 	void Renderer::_waitForPreviousFrame()
@@ -945,13 +941,18 @@ namespace Humpback
 	void Renderer::_loadGeometryFromFileASSIMP()
 	{
 		m_modelLoader = std::make_unique<HMeshImporter>(m_device.Get(), m_commandList.Get());
-
 		if (m_modelLoader->Load("Assets/PreviewSphere.fbx") == false)
 		{
-			MessageBox(0, L"Assets/PreviewSphere.fbx", 0, 0);
+			MessageBox(0, L"Can NOT load Assets/PreviewSphere.fbx", 0, 0);
 		}
 
+		auto modelImporter = std::make_unique<HMeshImporter>(m_device.Get(), m_commandList.Get());
+		if (modelImporter->Load("Assets/MeetMat/MeetMat.fbx") == false)
+		{
+			MessageBox(0, L"Can NOT load MeetMat.fbx", 0, 0);
+		}
 
+		m_modelImporters.push_back(std::move(modelImporter));
 	}
 
 	void Renderer::_createSceneLights()
@@ -1340,6 +1341,9 @@ namespace Humpback
 
 	void Renderer::_createRenderableObjects()
 	{
+		// TODO
+		// refine.
+
 		int constantBufferIdx = 0;
 
 		auto sky = std::make_unique<RenderableObject>();
@@ -1372,7 +1376,7 @@ namespace Humpback
 		XMStoreFloat4x4(&previewSphereItem->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
 		previewSphereItem->texTrans = HMathHelper::Identity4x4();
 		previewSphereItem->cbIndex = constantBufferIdx;
-		previewSphereItem->material = m_materials["mat_sphere"].get();
+		previewSphereItem->material = m_materials["mat_preview_sphere"].get();
 		previewSphereItem->mesh = m_modelLoader->GetMesh();
 		previewSphereItem->instanceCount = 0;
 		previewSphereItem->indexCount = previewSphereItem->mesh->drawArgs["main"].indexCount;
@@ -1381,40 +1385,81 @@ namespace Humpback
 		m_renderLayers[(int)RenderLayer::Opaque].push_back(previewSphereItem.get());
 		m_renderableList.push_back(std::move(previewSphereItem));
 		++constantBufferIdx;
+
+		auto characterGO = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&characterGO->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		characterGO->texTrans = HMathHelper::Identity4x4();
+		characterGO->cbIndex = constantBufferIdx;
+		characterGO->material = m_materials["mat_character"].get();
+		characterGO->mesh = m_modelImporters[0]->GetMesh();
+		characterGO->instanceCount = 0;
+		characterGO->indexCount = characterGO->mesh->drawArgs["main"].indexCount;
+		characterGO->startIndexLocation = characterGO->mesh->drawArgs["main"].startIndexLocation;
+		characterGO->startIndexLocation = characterGO->mesh->drawArgs["main"].baseVertexLocation;
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO.get());
+		m_renderableList.push_back(std::move(characterGO));
+		++constantBufferIdx;
+
+		auto characterGO1 = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&characterGO1->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		characterGO1->texTrans = HMathHelper::Identity4x4();
+		characterGO1->cbIndex = constantBufferIdx;
+		characterGO1->material = m_materials["mat_preview_sphere"].get();
+		characterGO1->mesh = m_modelImporters[0]->GetMesh(1);
+		characterGO1->instanceCount = 0;
+		characterGO1->indexCount = characterGO1->mesh->drawArgs["main"].indexCount;
+		characterGO1->startIndexLocation = characterGO1->mesh->drawArgs["main"].startIndexLocation;
+		characterGO1->startIndexLocation = characterGO1->mesh->drawArgs["main"].baseVertexLocation;
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO1.get());
+		m_renderableList.push_back(std::move(characterGO1));
+		++constantBufferIdx;
+
+		auto characterGO2 = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&characterGO2->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		characterGO2->texTrans = HMathHelper::Identity4x4();
+		characterGO2->cbIndex = constantBufferIdx;
+		characterGO2->material = m_materials["mat_preview_sphere"].get();
+		characterGO2->mesh = m_modelImporters[0]->GetMesh(2);
+		characterGO2->instanceCount = 0;
+		characterGO2->indexCount = characterGO2->mesh->drawArgs["main"].indexCount;
+		characterGO2->startIndexLocation = characterGO2->mesh->drawArgs["main"].startIndexLocation;
+		characterGO2->startIndexLocation = characterGO2->mesh->drawArgs["main"].baseVertexLocation;
+		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO2.get());
+		m_renderableList.push_back(std::move(characterGO2));
+		++constantBufferIdx;
 	}
 
-	void Renderer::_createMaterialsData()
+	void Renderer::_createAllMaterials()
 	{
+		// TODO
+		// Refine
+
 		int matCbIdx = 0;
 
-		auto bricksMat = std::make_unique<Material>();
-		bricksMat->name = "mat_bricks";
-		bricksMat->matCBIdx = matCbIdx;
-		bricksMat->diffuseSrvHeapIndex = m_defaultWhiteIndex;
-		bricksMat->normalSrvHeapIndex = m_defaultNormalMapIndex;
-		bricksMat->metallicSmothnessSrvHeapIndex = m_defaultBlackIndex;
-		bricksMat->diffuseAlbedo = XMFLOAT4(Colors::DarkGray);
+		_createMaterial("mat_bricks", matCbIdx, m_defaultWhiteIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(Colors::DarkGray));
 		++matCbIdx;
 
-		auto skyMat = std::make_unique<Material>();
-		skyMat->name = "mat_sky";
-		skyMat->matCBIdx = matCbIdx;
-		skyMat->diffuseSrvHeapIndex = 3;
-		skyMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		_createMaterial("mat_sky", matCbIdx, m_skyTexHeapIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 		++matCbIdx;
 
-		auto previewSphereMat = std::make_unique<Material>();
-		previewSphereMat->name = "mat_preview_sphere";
-		previewSphereMat->matCBIdx = matCbIdx;
-		previewSphereMat->diffuseSrvHeapIndex = 0;
-		previewSphereMat->normalSrvHeapIndex = 1;
-		previewSphereMat->metallicSmothnessSrvHeapIndex = 2;
-		previewSphereMat->diffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		_createMaterial("mat_preview_sphere", matCbIdx, 0, 1, 2, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 		++matCbIdx;
 
-		m_materials["mat_bricks"] = std::move(bricksMat);
-		m_materials["mat_sky"] = std::move(skyMat);
-		m_materials["mat_sphere"] = std::move(previewSphereMat);
+		_createMaterial("mat_character", matCbIdx, 3, m_defaultNormalMapIndex, 4, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		++matCbIdx;
+	}
+
+	void Renderer::_createMaterial(const std::string& matName, int cbIndex, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, XMFLOAT4& diffuseTint)
+	{
+		auto mat = std::make_unique<Material>();
+		mat->name = matName;
+		mat->matCBIdx = cbIndex;
+		mat->diffuseSrvHeapIndex = diffuseSrvIdx;
+		mat->normalSrvHeapIndex = normalSrvIdx;
+		mat->metallicSmothnessSrvHeapIndex = metallicSmoothnessSrvIdx;
+		mat->diffuseAlbedo = diffuseTint;
+
+		m_materials[matName] = std::move(mat);
 	}
 
 	void Renderer::_loadTextures()
@@ -1424,6 +1469,11 @@ namespace Humpback
 			"tex_sphere_albedo",
 			"tex_sphere_normal",
 			"tex_sphere_metallic",
+			"tex_char_albedo",
+			"tex_char_metallic_smoothness",
+
+
+
 			"tex_default_white",
 			"tex_default_black",
 			"tex_default_normal",
@@ -1434,6 +1484,10 @@ namespace Humpback
 			L"Assets/PreviewSphere_Sphere_AlbedoTransparency.png",
 			L"Assets/PreviewSphere_Sphere_Normal.png",
 			L"Assets/PreviewSphere_Sphere_MetallicSmoothness.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_01_Head_AlbedoTransparency.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_01_Head_MetallicSmoothness.png",
+
+
 			L"Assets/white.png",
 			L"Assets/black.png",
 			L"Assets/default_normal_map.png",
@@ -1442,6 +1496,7 @@ namespace Humpback
 		m_defaultNormalMapIndex = texPaths.size() - 1;
 		m_defaultBlackIndex = texPaths.size() - 2;
 		m_defaultWhiteIndex = texPaths.size() - 3;
+		m_defaultBlackIndex = texPaths.size();
 
 		// Create the skybox cubemap from the dds texture file.
 		{
@@ -1505,6 +1560,9 @@ namespace Humpback
 			m_textures["tex_sphere_albedo"]->resource,
 			m_textures["tex_sphere_normal"]->resource,
 			m_textures["tex_sphere_metallic"]->resource,
+			m_textures["tex_char_albedo"]->resource,
+			m_textures["tex_char_metallic_smoothness"]->resource,
+
 			m_textures["tex_default_white"]->resource,
 			m_textures["tex_default_black"]->resource,
 			m_textures["tex_default_normal"]->resource,

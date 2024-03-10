@@ -25,7 +25,7 @@ namespace Humpback
 
 		bool Load(std::string fileName);
 		
-		Mesh* GetMesh();
+		Mesh* GetMesh(int index = 0);
 
 	private:
 

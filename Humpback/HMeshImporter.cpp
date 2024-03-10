@@ -44,9 +44,9 @@ namespace Humpback
 		return true;
 	}
 
-	Mesh* HMeshImporter::GetMesh()
+	Mesh* HMeshImporter::GetMesh(int index)
 	{
-		return &m_meshes[0];
+		return &m_meshes[index];
 	}
 
 	void HMeshImporter::_processNode(aiNode* node, const aiScene* scene)

@@ -86,7 +86,8 @@ namespace Humpback
 		void _createPso();
 		void _createFrameResources();
 		void _createRenderableObjects();
-		void _createMaterialsData();
+		void _createAllMaterials();
+		void _createMaterial(const std::string& matName, int cbIndex, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, DirectX::XMFLOAT4& diffuseTint);
 		
 		void _loadTextures();
 		void _createDescriptorHeaps();
@@ -182,6 +183,7 @@ namespace Humpback
 		std::unordered_map<std::string, std::unique_ptr<Mesh>>		m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>>	m_materials;
 		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
+		std::vector<std::unique_ptr<HMeshImporter>>					m_modelImporters;
 
 		std::vector<std::unique_ptr<RenderableObject>>				m_renderableList;
 		std::vector<RenderableObject*>								m_renderLayers[(int)RenderLayer::Count];
@@ -198,6 +200,7 @@ namespace Humpback
 		int				m_defaultNormalMapIndex = 0;
 		int				m_defaultBlackIndex = 0;
 		int				m_defaultWhiteIndex = 0;
+
 		int				m_shadowMapHeapIndex = 0;
 		int				m_ssaoHeapIndexStart = 0;
 		int				m_ssaoAmbientMapIndex = 0;
