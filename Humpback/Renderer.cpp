@@ -27,6 +27,10 @@ using namespace DirectX::Colors;
 
 namespace Humpback 
 {
+	namespace {
+		int g_matIdx = 0;
+	}
+
 	class Material;
 
 	extern const int FRAME_RESOURCE_COUNT = 3;
@@ -1431,33 +1435,25 @@ namespace Humpback
 
 	void Renderer::_createAllMaterials()
 	{
-		// TODO
-		// Refine
+		g_matIdx = 0;
 
-		int matCbIdx = 0;
-
-		_createMaterial("mat_bricks", matCbIdx, m_defaultWhiteIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(Colors::DarkGray));
-		++matCbIdx;
-
-		_createMaterial("mat_sky", matCbIdx, m_skyTexHeapIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-		++matCbIdx;
-
-		_createMaterial("mat_preview_sphere", matCbIdx, 0, 1, 2, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-		++matCbIdx;
-
-		_createMaterial("mat_character", matCbIdx, 3, m_defaultNormalMapIndex, 4, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-		++matCbIdx;
+		_createMaterial("mat_bricks", m_defaultWhiteIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(Colors::DarkGray));
+		_createMaterial("mat_sky", m_skyTexHeapIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		_createMaterial("mat_preview_sphere", 0, 1, 2, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		_createMaterial("mat_character", 3, m_defaultNormalMapIndex, 4, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 
-	void Renderer::_createMaterial(const std::string& matName, int cbIndex, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, XMFLOAT4& diffuseTint)
+	void Renderer::_createMaterial(const std::string& matName, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, XMFLOAT4& diffuseTint)
 	{
 		auto mat = std::make_unique<Material>();
 		mat->name = matName;
-		mat->matCBIdx = cbIndex;
+		mat->matCBIdx = g_matIdx;
 		mat->diffuseSrvHeapIndex = diffuseSrvIdx;
 		mat->normalSrvHeapIndex = normalSrvIdx;
 		mat->metallicSmothnessSrvHeapIndex = metallicSmoothnessSrvIdx;
 		mat->diffuseAlbedo = diffuseTint;
+
+		g_matIdx += 1;
 
 		m_materials[matName] = std::move(mat);
 	}

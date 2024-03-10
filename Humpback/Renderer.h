@@ -87,7 +87,7 @@ namespace Humpback
 		void _createFrameResources();
 		void _createRenderableObjects();
 		void _createAllMaterials();
-		void _createMaterial(const std::string& matName, int cbIndex, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, DirectX::XMFLOAT4& diffuseTint);
+		void _createMaterial(const std::string& matName, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, DirectX::XMFLOAT4& diffuseTint);
 		
 		void _loadTextures();
 		void _createDescriptorHeaps();
