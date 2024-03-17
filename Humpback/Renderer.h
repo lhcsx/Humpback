@@ -85,7 +85,8 @@ namespace Humpback
 		void _createPixelShader(const std::wstring& fullPath, const std::string& shaderName);
 		void _createPso();
 		void _createFrameResources();
-		void _createRenderableObjects();
+		void _createAllRenderableObjects();
+		void _createRenderableObject(const std::string& matName, Mesh* pMesh, const std::string& drawArgs, RenderLayer layer, DirectX::XMMATRIX scaleTranslate);
 		void _createAllMaterials();
 		void _createMaterial(const std::string& matName, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, DirectX::XMFLOAT4& diffuseTint);
 		

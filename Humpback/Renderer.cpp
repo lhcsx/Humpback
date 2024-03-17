@@ -29,6 +29,7 @@ namespace Humpback
 {
 	namespace {
 		int g_matIdx = 0;
+		int g_constantBufferIdx = 0;
 	}
 
 	class Material;
@@ -73,7 +74,7 @@ namespace Humpback
 		_createSceneGeometry();
 		_loadGeometryFromFileASSIMP();
 		_createAllMaterials();
-		_createRenderableObjects();
+		_createAllRenderableObjects();
 
 		_createFrameResources();
 		_createPso();
@@ -1343,94 +1344,33 @@ namespace Humpback
 		m_shaders[shaderName] = D3DUtil::CompileShader(fullPath, nullptr, "PS", Renderer::SHADER_MODEL_FRAGMENT);
 	}
 
-	void Renderer::_createRenderableObjects()
+	void Renderer::_createAllRenderableObjects()
 	{
-		// TODO
-		// refine.
+		g_constantBufferIdx = 0;
 
-		int constantBufferIdx = 0;
+		_createRenderableObject("mat_sky", m_meshes["shapeGeo"].get(), "sphere", RenderLayer::Sky, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
+		_createRenderableObject("mat_bricks", m_meshes["shapeGeo"].get(), "grid", RenderLayer::Opaque, XMMatrixScaling(1.0f, 1.0f, 1.0f));
+		_createRenderableObject("mat_preview_sphere", m_modelLoader->GetMesh(), "main", RenderLayer::Opaque, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
+		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(1), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(2), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+	}
 
-		auto sky = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&sky->worldM, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
-		sky->texTrans = HMathHelper::Identity4x4();
-		sky->cbIndex = constantBufferIdx;
-		sky->material = m_materials["mat_sky"].get();
-		sky->mesh = m_meshes["shapeGeo"].get();
-		sky->indexCount = sky->mesh->drawArgs["sphere"].indexCount;
-		sky->startIndexLocation = sky->mesh->drawArgs["sphere"].startIndexLocation;
-		sky->baseVertexLocation = sky->mesh->drawArgs["sphere"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Sky].push_back(sky.get());
-		m_renderableList.push_back(std::move(sky));
-		++constantBufferIdx;
-
-		auto gridRitem = std::make_unique<RenderableObject>();
-		gridRitem->worldM = HMathHelper::Identity4x4();
-		XMStoreFloat4x4(&gridRitem->texTrans, XMMatrixScaling(8.0f, 8.0f, 1.0f));
-		gridRitem->cbIndex = constantBufferIdx;
-		gridRitem->material = m_materials["mat_bricks"].get();
-		gridRitem->mesh = m_meshes["shapeGeo"].get();
-		gridRitem->indexCount = gridRitem->mesh->drawArgs["grid"].indexCount;
-		gridRitem->startIndexLocation = gridRitem->mesh->drawArgs["grid"].startIndexLocation;
-		gridRitem->baseVertexLocation = gridRitem->mesh->drawArgs["grid"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(gridRitem.get());
-		m_renderableList.push_back(std::move(gridRitem));
-		++constantBufferIdx;
-
-		auto previewSphereItem = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&previewSphereItem->worldM, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
-		previewSphereItem->texTrans = HMathHelper::Identity4x4();
-		previewSphereItem->cbIndex = constantBufferIdx;
-		previewSphereItem->material = m_materials["mat_preview_sphere"].get();
-		previewSphereItem->mesh = m_modelLoader->GetMesh();
-		previewSphereItem->instanceCount = 0;
-		previewSphereItem->indexCount = previewSphereItem->mesh->drawArgs["main"].indexCount;
-		previewSphereItem->startIndexLocation = previewSphereItem->mesh->drawArgs["main"].startIndexLocation;
-		previewSphereItem->startIndexLocation = previewSphereItem->mesh->drawArgs["main"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(previewSphereItem.get());
-		m_renderableList.push_back(std::move(previewSphereItem));
-		++constantBufferIdx;
-
-		auto characterGO = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&characterGO->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
-		characterGO->texTrans = HMathHelper::Identity4x4();
-		characterGO->cbIndex = constantBufferIdx;
-		characterGO->material = m_materials["mat_character"].get();
-		characterGO->mesh = m_modelImporters[0]->GetMesh();
-		characterGO->instanceCount = 0;
-		characterGO->indexCount = characterGO->mesh->drawArgs["main"].indexCount;
-		characterGO->startIndexLocation = characterGO->mesh->drawArgs["main"].startIndexLocation;
-		characterGO->startIndexLocation = characterGO->mesh->drawArgs["main"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO.get());
-		m_renderableList.push_back(std::move(characterGO));
-		++constantBufferIdx;
-
-		auto characterGO1 = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&characterGO1->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
-		characterGO1->texTrans = HMathHelper::Identity4x4();
-		characterGO1->cbIndex = constantBufferIdx;
-		characterGO1->material = m_materials["mat_preview_sphere"].get();
-		characterGO1->mesh = m_modelImporters[0]->GetMesh(1);
-		characterGO1->instanceCount = 0;
-		characterGO1->indexCount = characterGO1->mesh->drawArgs["main"].indexCount;
-		characterGO1->startIndexLocation = characterGO1->mesh->drawArgs["main"].startIndexLocation;
-		characterGO1->startIndexLocation = characterGO1->mesh->drawArgs["main"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO1.get());
-		m_renderableList.push_back(std::move(characterGO1));
-		++constantBufferIdx;
-
-		auto characterGO2 = std::make_unique<RenderableObject>();
-		XMStoreFloat4x4(&characterGO2->worldM, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
-		characterGO2->texTrans = HMathHelper::Identity4x4();
-		characterGO2->cbIndex = constantBufferIdx;
-		characterGO2->material = m_materials["mat_preview_sphere"].get();
-		characterGO2->mesh = m_modelImporters[0]->GetMesh(2);
-		characterGO2->instanceCount = 0;
-		characterGO2->indexCount = characterGO2->mesh->drawArgs["main"].indexCount;
-		characterGO2->startIndexLocation = characterGO2->mesh->drawArgs["main"].startIndexLocation;
-		characterGO2->startIndexLocation = characterGO2->mesh->drawArgs["main"].baseVertexLocation;
-		m_renderLayers[(int)RenderLayer::Opaque].push_back(characterGO2.get());
-		m_renderableList.push_back(std::move(characterGO2));
-		++constantBufferIdx;
+	void Renderer::_createRenderableObject(const std::string& matName, Mesh* pMesh,
+		const std::string& drawArgs, RenderLayer layer, DirectX::XMMATRIX scaleTranslate)
+	{
+		auto ro = std::make_unique<RenderableObject>();
+		XMStoreFloat4x4(&ro->worldM, scaleTranslate);
+		ro->texTrans = HMathHelper::Identity4x4();
+		ro->cbIndex = g_constantBufferIdx;
+		ro->material = m_materials[matName].get();
+		ro->mesh = pMesh;
+		ro->indexCount = ro->mesh->drawArgs[drawArgs].indexCount;
+		ro->startIndexLocation = ro->mesh->drawArgs[drawArgs].startIndexLocation;
+		ro->baseVertexLocation = ro->mesh->drawArgs[drawArgs].baseVertexLocation;
+		m_renderLayers[(int)layer].push_back(ro.get());
+		m_renderableList.push_back(std::move(ro));
+		++g_constantBufferIdx;
 	}
 
 	void Renderer::_createAllMaterials()
