@@ -1352,8 +1352,8 @@ namespace Humpback
 		_createRenderableObject("mat_bricks", m_meshes["shapeGeo"].get(), "grid", RenderLayer::Opaque, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 		_createRenderableObject("mat_preview_sphere", m_modelLoader->GetMesh(), "main", RenderLayer::Opaque, XMMatrixScaling(2.0f, 2.0f, 2.0f) * XMMatrixTranslation(2.0f, 2.5f, 0.0f));
 		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
-		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(1), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
-		_createRenderableObject("mat_character", m_modelImporters[0]->GetMesh(2), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		_createRenderableObject("mat_char_body", m_modelImporters[0]->GetMesh(1), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
+		_createRenderableObject("mat_char_base", m_modelImporters[0]->GetMesh(2), "main", RenderLayer::Opaque, XMMatrixScaling(.5f, .5f, .5f) * XMMatrixTranslation(-4.0f, 0.0f, 0.0f));
 	}
 
 	void Renderer::_createRenderableObject(const std::string& matName, Mesh* pMesh,
@@ -1381,6 +1381,8 @@ namespace Humpback
 		_createMaterial("mat_sky", m_skyTexHeapIndex, m_defaultNormalMapIndex, m_defaultBlackIndex, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 		_createMaterial("mat_preview_sphere", 0, 1, 2, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 		_createMaterial("mat_character", 3, m_defaultNormalMapIndex, 4, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		_createMaterial("mat_char_body", 5, m_defaultNormalMapIndex, 6, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		_createMaterial("mat_char_base", 7, m_defaultNormalMapIndex, 8, XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 
 	void Renderer::_createMaterial(const std::string& matName, int diffuseSrvIdx, int normalSrvIdx, int metallicSmoothnessSrvIdx, XMFLOAT4& diffuseTint)
@@ -1407,6 +1409,10 @@ namespace Humpback
 			"tex_sphere_metallic",
 			"tex_char_albedo",
 			"tex_char_metallic_smoothness",
+			"tex_char_body_albedo",
+			"tex_char_body_met_smo",
+			"tex_char_base_albedo",
+			"tex_char_base_met_smo",
 
 
 
@@ -1422,6 +1428,10 @@ namespace Humpback
 			L"Assets/PreviewSphere_Sphere_MetallicSmoothness.png",
 			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_01_Head_AlbedoTransparency.png",
 			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_01_Head_MetallicSmoothness.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_02_Body_AlbedoTransparency.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_02_Body_MetallicSmoothness.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_03_Base_AlbedoTransparency.png",
+			L"Assets/MeetMat/MeetMat_2019_Cameras_03_CleanedMaterialNames_03_Base_MetallicSmoothness.png",
 
 
 			L"Assets/white.png",
@@ -1432,7 +1442,6 @@ namespace Humpback
 		m_defaultNormalMapIndex = texPaths.size() - 1;
 		m_defaultBlackIndex = texPaths.size() - 2;
 		m_defaultWhiteIndex = texPaths.size() - 3;
-		m_defaultBlackIndex = texPaths.size();
 
 		// Create the skybox cubemap from the dds texture file.
 		{
@@ -1487,17 +1496,24 @@ namespace Humpback
 		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.NumDescriptors = 18;
+		srvHeapDesc.NumDescriptors = 30;
 		ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
+
+		// TODO
+		// Remove the dependency of the texture's name.
 		std::vector<ComPtr<ID3D12Resource>> tex2DList = {
 			m_textures["tex_sphere_albedo"]->resource,
 			m_textures["tex_sphere_normal"]->resource,
 			m_textures["tex_sphere_metallic"]->resource,
 			m_textures["tex_char_albedo"]->resource,
 			m_textures["tex_char_metallic_smoothness"]->resource,
+			m_textures["tex_char_body_albedo"]->resource,
+			m_textures["tex_char_body_met_smo"]->resource,
+			m_textures["tex_char_base_albedo"]->resource,
+			m_textures["tex_char_base_met_smo"]->resource,
 
 			m_textures["tex_default_white"]->resource,
 			m_textures["tex_default_black"]->resource,
@@ -1513,7 +1529,6 @@ namespace Humpback
 
 		for (size_t i = 0; i < tex2DList.size(); i++)
 		{
-			// Create srv for diffuse and normal textures.
 			srvDesc.Format = tex2DList[i]->GetDesc().Format;
 			srvDesc.Texture2D.MipLevels = tex2DList[i]->GetDesc().MipLevels;
 			m_device->CreateShaderResourceView(tex2DList[i].Get(), &srvDesc, srvDescHandle);
