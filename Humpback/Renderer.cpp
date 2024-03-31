@@ -1443,16 +1443,6 @@ namespace Humpback
 		m_defaultBlackIndex = texPaths.size() - 2;
 		m_defaultWhiteIndex = texPaths.size() - 3;
 
-		// Create the skybox cubemap from the dds texture file.
-		{
-			auto tex = std::make_unique<Texture>();
-			tex->name = "sky_box";
-			ThrowIfFailed(CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(), L"Assets/grasscube1024.dds",
-				tex->resource, tex->uploadHeap));
-
-			m_textures[tex->name] = std::move(tex);
-		}
-
 		for (size_t i = 0; i < texPaths.size(); i++)
 		{
 			std::wstring path = texPaths[i];
@@ -1487,7 +1477,17 @@ namespace Humpback
 				D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			m_commandList->ResourceBarrier(1, &barrier);
 
-			m_textures[tex->name] = std::move(tex);
+			m_textures.push_back(std::move(tex));
+		}
+
+		// Create the skybox cubemap from the dds texture file.
+		{
+			auto tex = std::make_unique<Texture>();
+			tex->name = "sky_box";
+			ThrowIfFailed(CreateDDSTextureFromFile12(m_device.Get(), m_commandList.Get(), L"Assets/grasscube1024.dds",
+				tex->resource, tex->uploadHeap));
+
+			m_textures.push_back(std::move(tex));
 		}
 	}
 
@@ -1502,23 +1502,11 @@ namespace Humpback
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescHandle(m_srvHeap->GetCPUDescriptorHandleForHeapStart());
 
 
-		// TODO
-		// Remove the dependency of the texture's name.
-		std::vector<ComPtr<ID3D12Resource>> tex2DList = {
-			m_textures["tex_sphere_albedo"]->resource,
-			m_textures["tex_sphere_normal"]->resource,
-			m_textures["tex_sphere_metallic"]->resource,
-			m_textures["tex_char_albedo"]->resource,
-			m_textures["tex_char_metallic_smoothness"]->resource,
-			m_textures["tex_char_body_albedo"]->resource,
-			m_textures["tex_char_body_met_smo"]->resource,
-			m_textures["tex_char_base_albedo"]->resource,
-			m_textures["tex_char_base_met_smo"]->resource,
-
-			m_textures["tex_default_white"]->resource,
-			m_textures["tex_default_black"]->resource,
-			m_textures["tex_default_normal"]->resource,
-		};
+		std::vector<ComPtr<ID3D12Resource>> tex2DList;
+		for (size_t i = 0; i < m_textures.size() - 1; i++)
+		{
+			tex2DList.push_back(m_textures[i]->resource);
+		}
 
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -1537,7 +1525,8 @@ namespace Humpback
 		}
 
 		// Create srv for sky box.
-		auto skyCubeMap = m_textures["sky_box"]->resource;
+		m_skyTexHeapIndex = tex2DList.size();
+		auto skyCubeMap = m_textures[m_skyTexHeapIndex]->resource;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = skyCubeMap->GetDesc().MipLevels;
 		srvDesc.Format = skyCubeMap->GetDesc().Format;
@@ -1545,7 +1534,6 @@ namespace Humpback
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 		m_device->CreateShaderResourceView(skyCubeMap.Get(), &srvDesc, srvDescHandle);
 
-		m_skyTexHeapIndex = tex2DList.size();
 		m_shadowMapHeapIndex = m_skyTexHeapIndex + 1;
 		m_ssaoHeapIndexStart = m_shadowMapHeapIndex + 1;
 		m_ssaoAmbientMapIndex = m_ssaoHeapIndexStart + 3;

@@ -5,6 +5,7 @@
 
 #include <string>
 #include <memory>
+#include <map>
 
 #include "Camera.h"
 #include "Mesh.h"
@@ -183,7 +184,7 @@ namespace Humpback
 		std::unique_ptr<HMeshImporter>		m_modelLoader = nullptr;
 		std::unordered_map<std::string, std::unique_ptr<Mesh>>		m_meshes;
 		std::unordered_map<std::string, std::unique_ptr<Material>>	m_materials;
-		std::unordered_map<std::string, std::unique_ptr<Texture>>	m_textures;
+		std::vector<std::unique_ptr<Texture>>	m_textures;
 		std::vector<std::unique_ptr<HMeshImporter>>					m_modelImporters;
 
 		std::vector<std::unique_ptr<RenderableObject>>				m_renderableList;
